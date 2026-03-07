@@ -3,9 +3,11 @@ import Link from "next/link";
 import { useCartStore } from "@/store/cartStore";
 import { motion } from "framer-motion";
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import AuthModal, { User } from "./AuthModal";
 
 export default function Navbar() {
+    const router = useRouter();
     const totalItems = useCartStore((s) => s.totalItems());
     const [menuOpen, setMenuOpen] = useState(false);
 
@@ -13,6 +15,15 @@ export default function Navbar() {
     const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
     const [user, setUser] = useState<User | null>(null);
     const [isMounted, setIsMounted] = useState(false);
+    const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+    const [searchQuery, setSearchQuery] = useState("");
+    const [isSearchFocused, setIsSearchFocused] = useState(false);
+
+    const confirmLogout = () => {
+        setUser(null);
+        localStorage.removeItem("vetworld_token");
+        setShowLogoutConfirm(false);
+    };
 
     // Load from local storage on mount
     useEffect(() => {
@@ -37,6 +48,13 @@ export default function Navbar() {
             }
         }
     }, [user, isMounted]);
+
+    const handleSearch = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (searchQuery.trim()) {
+            router.push(`/category/all?q=${encodeURIComponent(searchQuery.trim())}`);
+        }
+    };
 
     // Don't render auth buttons until mounted to prevent hydration mismatch
     const renderAuth = () => {
@@ -69,7 +87,7 @@ export default function Navbar() {
                         </Link>
 
                         <button
-                            onClick={() => setUser(null)} // Explicit Logout
+                            onClick={() => setShowLogoutConfirm(true)}
                             style={{
                                 display: "flex",
                                 alignItems: "center",
@@ -97,13 +115,59 @@ export default function Navbar() {
                     </div>
                 )}
 
-                {/* Auth Button for Regular Users / Login Trigger */}
-                {!user?.isAdmin && (
+                {/* Auth: Regular User (logged in) */}
+                {!user?.isAdmin && user && (
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                        {/* Greeting */}
+                        <span style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "0.4rem",
+                            fontWeight: 600,
+                            fontSize: "0.9rem",
+                            color: "var(--text-primary)",
+                            padding: "0.5rem 1rem",
+                            borderRadius: "var(--radius-sm)",
+                            border: "1.5px solid var(--border)",
+                        }}>
+                            <UserIcon />
+                            Hi {user.name}!
+                        </span>
+
+                        {/* Logout Button */}
+                        <button
+                            onClick={() => setShowLogoutConfirm(true)}
+                            style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "0.4rem",
+                                background: "rgba(239, 68, 68, 0.1)",
+                                color: "rgb(239, 68, 68)",
+                                fontWeight: 600,
+                                fontSize: "0.9rem",
+                                padding: "0.5rem 1rem",
+                                borderRadius: "var(--radius-sm)",
+                                border: "1px solid rgba(239, 68, 68, 0.2)",
+                                transition: "all var(--transition)",
+                                cursor: "pointer",
+                            }}
+                            onMouseEnter={(e) => {
+                                e.currentTarget.style.background = "rgba(239, 68, 68, 0.15)";
+                            }}
+                            onMouseLeave={(e) => {
+                                e.currentTarget.style.background = "rgba(239, 68, 68, 0.1)";
+                            }}
+                        >
+                            <LogoutIcon />
+                            <span>Logout</span>
+                        </button>
+                    </div>
+                )}
+
+                {/* Auth: Not logged in -> Show Login button */}
+                {!user && (
                     <button
-                        onClick={() => {
-                            if (user) setUser(null); // Logout functionality for regular users
-                            else setIsAuthModalOpen(true);   // Open modal
-                        }}
+                        onClick={() => setIsAuthModalOpen(true)}
                         style={{
                             display: "flex",
                             alignItems: "center",
@@ -128,7 +192,7 @@ export default function Navbar() {
                         }}
                     >
                         <UserIcon />
-                        <span>{user ? `Hi ${user.name}` : "Login"}</span>
+                        <span>Login</span>
                     </button>
                 )}
             </>
@@ -154,10 +218,56 @@ export default function Navbar() {
                 </Link>
 
                 {/* Nav Links */}
-                <nav style={{ display: "flex", alignItems: "center", gap: "1.5rem", marginLeft: "1rem", flex: 1 }}>
+                <nav style={{ display: "flex", alignItems: "center", gap: "1.5rem", marginLeft: "1rem" }}>
                     <NavLink href="/">Home</NavLink>
                     <NavLink href="/category/all">Products</NavLink>
+                    <NavLink href="/categories">Categories</NavLink>
                 </nav>
+
+                {/* Search Bar - Center/Right Expansion */}
+                <div style={{ flex: 1, display: "flex", justifyContent: "center", maxWidth: "600px" }}>
+                    <form
+                        onSubmit={handleSearch}
+                        style={{
+                            width: "100%",
+                            position: "relative",
+                            display: "flex",
+                            alignItems: "center"
+                        }}
+                    >
+                        <div style={{
+                            position: "absolute",
+                            left: "12px",
+                            opacity: 0.5,
+                            display: "flex",
+                            alignItems: "center",
+                            pointerEvents: "none"
+                        }}>
+                            <SearchIcon />
+                        </div>
+                        <input
+                            type="text"
+                            placeholder="Search for products, brands or equipment..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            onFocus={() => setIsSearchFocused(true)}
+                            onBlur={() => setIsSearchFocused(false)}
+                            style={{
+                                width: "100%",
+                                padding: "0.6rem 1rem 0.6rem 2.5rem",
+                                borderRadius: "var(--radius-md)",
+                                border: "1.5px solid",
+                                borderColor: isSearchFocused ? "var(--vet-blue)" : "var(--border)",
+                                background: "var(--bg)",
+                                color: "var(--text-primary)",
+                                outline: "none",
+                                fontSize: "0.9rem",
+                                transition: "all var(--transition)",
+                                boxShadow: isSearchFocused ? "0 0 0 3px rgba(37, 99, 235, 0.1)" : "none"
+                            }}
+                        />
+                    </form>
+                </div>
 
                 {/* Actions: Cart + Auth */}
                 <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
@@ -202,6 +312,73 @@ export default function Navbar() {
                 onClose={() => setIsAuthModalOpen(false)}
                 onLoginSuccess={(u) => setUser(u)}
             />
+
+            {/* ── Logout Confirmation Dialog ── */}
+            {showLogoutConfirm && (
+                <>
+                    {/* Backdrop */}
+                    <motion.div
+                        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                        onClick={() => setShowLogoutConfirm(false)}
+                        style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", backdropFilter: "blur(4px)", zIndex: 300 }}
+                    />
+
+                    {/* Dialog centering wrapper */}
+                    <div style={{ position: "fixed", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 301, pointerEvents: "none" }}>
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.88, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.88, y: 20 }}
+                            transition={{ type: "spring", damping: 25, stiffness: 300 }}
+                            style={{
+                                background: "var(--surface)", borderRadius: "var(--radius-lg)",
+                                boxShadow: "var(--shadow-lg)", padding: "2rem",
+                                width: "min(380px, 90vw)", pointerEvents: "all",
+                                textAlign: "center",
+                            }}
+                        >
+                            {/* Warning icon */}
+                            <div style={{ fontSize: "2.5rem", marginBottom: "0.75rem" }}>⚠️</div>
+                            <h3 style={{ fontSize: "1.15rem", fontWeight: 700, marginBottom: "0.5rem", color: "var(--text-primary)" }}>
+                                Confirm Logout
+                            </h3>
+                            <p style={{ color: "var(--text-secondary)", fontSize: "0.9rem", marginBottom: "1.5rem", lineHeight: 1.5 }}>
+                                Are you sure you want to logout?<br />You will need to sign in again to access your account.
+                            </p>
+
+                            {/* Buttons */}
+                            <div style={{ display: "flex", gap: "0.75rem", justifyContent: "center" }}>
+                                <button
+                                    onClick={() => setShowLogoutConfirm(false)}
+                                    style={{
+                                        flex: 1, padding: "0.7rem 1.2rem", borderRadius: "var(--radius-sm)",
+                                        border: "1.5px solid var(--border)", background: "transparent",
+                                        color: "var(--text-primary)", fontWeight: 600, fontSize: "0.9rem",
+                                        cursor: "pointer", transition: "all var(--transition)",
+                                    }}
+                                    onMouseEnter={e => { e.currentTarget.style.borderColor = "var(--vet-blue)"; e.currentTarget.style.color = "var(--vet-blue)"; }}
+                                    onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.color = "var(--text-primary)"; }}
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={confirmLogout}
+                                    style={{
+                                        flex: 1, padding: "0.7rem 1.2rem", borderRadius: "var(--radius-sm)",
+                                        border: "none", background: "rgb(239, 68, 68)",
+                                        color: "#fff", fontWeight: 600, fontSize: "0.9rem",
+                                        cursor: "pointer", transition: "filter var(--transition)",
+                                    }}
+                                    onMouseEnter={e => e.currentTarget.style.filter = "brightness(1.1)"}
+                                    onMouseLeave={e => e.currentTarget.style.filter = "brightness(1)"}
+                                >
+                                    Yes, Logout
+                                </button>
+                            </div>
+                        </motion.div>
+                    </div>
+                </>
+            )}
         </header>
     );
 }
@@ -249,6 +426,15 @@ function DashboardIcon() {
             <rect x="14" y="3" width="7" height="5"></rect>
             <rect x="14" y="12" width="7" height="9"></rect>
             <rect x="3" y="16" width="7" height="5"></rect>
+        </svg>
+    );
+}
+
+function SearchIcon() {
+    return (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
         </svg>
     );
 }

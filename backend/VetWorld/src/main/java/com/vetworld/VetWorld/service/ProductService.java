@@ -23,7 +23,7 @@ public class ProductService {
     }
 
     public List<ProductDto> getTopSelling() {
-        return productRepository.findByIsTopSellingTrue().stream().map(this::toDto).collect(Collectors.toList());
+        return productRepository.findByTopSellingTrue().stream().map(this::toDto).collect(Collectors.toList());
     }
 
     public List<ProductDto> getRecentProducts() {
@@ -33,6 +33,10 @@ public class ProductService {
 
     public List<ProductDto> getByCategory(Long categoryId) {
         return productRepository.findByCategoryId(categoryId).stream().map(this::toDto).collect(Collectors.toList());
+    }
+
+    public List<ProductDto> searchProducts(String keyword) {
+        return productRepository.searchProducts(keyword).stream().map(this::toDto).collect(Collectors.toList());
     }
 
     public ProductDto getById(Long id) {

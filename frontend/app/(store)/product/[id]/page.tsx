@@ -115,7 +115,7 @@ export default function ProductDetailPage({ params }: Props) {
 
                 {/* ── Details ────────────────────────────── */}
                 <div>
-                    {product.isTopSelling && (
+                    {product.topSelling && (
                         <span
                             style={{
                                 display: "inline-block", background: "var(--vet-orange)", color: "#fff",

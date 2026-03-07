@@ -2,6 +2,7 @@ package com.vetworld.VetWorld.model;
 
 import jakarta.persistence.*;
 import lombok.*;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "users")
@@ -33,4 +34,8 @@ public class User {
     @Column(nullable = false)
     @Builder.Default
     private Role role = Role.USER;
+
+    // Password reset fields
+    private String resetToken;
+    private LocalDateTime resetTokenExpiry;
 }

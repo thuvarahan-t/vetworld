@@ -100,7 +100,7 @@ export default function ProductCard({ product }: Props) {
                             🧪
                         </div>
                     )}
-                    {product.isTopSelling && (
+                    {product.topSelling && (
                         <span
                             style={{
                                 position: "absolute", top: 10, left: 10,

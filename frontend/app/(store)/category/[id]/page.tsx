@@ -39,12 +39,16 @@ export default async function CategoryPage({ params, searchParams }: Params) {
     const { products, categories, categoryName } = await getData(id);
 
     let filtered = products as Product[];
-    if (filter === "top") filtered = filtered.filter((p) => p.isTopSelling);
+    if (filter === "top") filtered = filtered.filter((p) => p.topSelling);
     if (q) {
-        const query = q.toLowerCase();
-        filtered = filtered.filter(
-            (p) => p.name.toLowerCase().includes(query) || p.description?.toLowerCase().includes(query)
-        );
+        const Fuse = (await import("fuse.js")).default;
+        const fuse = new Fuse(filtered, {
+            keys: ["name", "description"],
+            threshold: 0.35, // 0 is exact, 1 is anything. 0.35 is good for typos.
+            distance: 100,
+            ignoreLocation: true
+        });
+        filtered = fuse.search(q).map(res => res.item);
     }
 
     return (

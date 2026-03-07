@@ -40,6 +40,21 @@ public class CategoryService {
     }
 
     @Transactional
+    public CategoryDto updateCategory(Long id, CategoryRequest request) {
+        Category category = categoryRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Category not found with id: " + id));
+
+        // Only check name existence if name is changed
+        if (!category.getName().equals(request.getName()) && categoryRepository.existsByName(request.getName())) {
+            throw new RuntimeException("Category with name '" + request.getName() + "' already exists");
+        }
+
+        category.setName(request.getName());
+        category.setImageUrl(request.getImageUrl());
+        return toDto(categoryRepository.save(category));
+    }
+
+    @Transactional
     public void deleteCategory(Long id) {
         categoryRepository.deleteById(id);
     }

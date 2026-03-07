@@ -31,6 +31,15 @@ public class BannerService {
     }
 
     @Transactional
+    public BannerDto updateBanner(Long id, BannerRequest request) {
+        Banner banner = bannerRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Banner not found with id: " + id));
+        banner.setImageUrl(request.getImageUrl());
+        banner.setRedirectLink(request.getRedirectLink());
+        return toDto(bannerRepository.save(banner));
+    }
+
+    @Transactional
     public void deleteBanner(Long id) {
         bannerRepository.deleteById(id);
     }

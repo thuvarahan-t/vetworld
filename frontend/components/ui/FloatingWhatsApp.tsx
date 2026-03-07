@@ -20,7 +20,7 @@ export default function FloatingWhatsApp() {
     }, [controls]);
 
     const handleWhatsAppClick = () => {
-        const phone = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || "1234567890";
+        const phone = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || "94773300802";
         const message = encodeURIComponent("Hello VetWorld! I have an inquiry.");
         window.open(`https://wa.me/${phone}?text=${message}`, "_blank");
     };

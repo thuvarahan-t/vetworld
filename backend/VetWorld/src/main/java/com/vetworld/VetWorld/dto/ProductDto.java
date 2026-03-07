@@ -11,7 +11,7 @@ public class ProductDto {
     private String description;
     private String imageUrl;
     private CategoryDto category;
-    private boolean isTopSelling;
+    private boolean topSelling;
     private LocalDateTime createdAt;
     private List<ProductTypeDto> types;
 }

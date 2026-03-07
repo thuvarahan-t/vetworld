@@ -33,7 +33,7 @@ public class Product {
     private Category category;
 
     @Column(name = "is_top_selling", nullable = false)
-    private boolean isTopSelling = false;
+    private boolean topSelling = false;
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)

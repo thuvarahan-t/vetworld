@@ -7,5 +7,6 @@ public class AdminStatsDto {
     private long totalProducts;
     private long totalCategories;
     private long totalBanners;
+    private long totalUsers;
     private long topSellingCount;
 }

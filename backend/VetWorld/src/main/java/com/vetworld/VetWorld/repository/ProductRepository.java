@@ -10,9 +10,12 @@ import java.util.List;
 public interface ProductRepository extends JpaRepository<Product, Long> {
     List<Product> findByCategoryId(Long categoryId);
 
-    List<Product> findByIsTopSellingTrue();
+    List<Product> findByTopSellingTrue();
 
     List<Product> findTop8ByOrderByCreatedAtDesc();
 
     List<Product> findByCategoryIdAndNameContainingIgnoreCase(Long categoryId, String name);
+
+    @org.springframework.data.jpa.repository.Query("SELECT p FROM Product p WHERE LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(p.description) LIKE LOWER(CONCAT('%', :keyword, '%'))")
+    List<Product> searchProducts(@org.springframework.data.repository.query.Param("keyword") String keyword);
 }

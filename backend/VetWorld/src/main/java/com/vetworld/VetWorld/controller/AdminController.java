@@ -1,6 +1,8 @@
 package com.vetworld.VetWorld.controller;
 
 import com.vetworld.VetWorld.dto.*;
+import com.vetworld.VetWorld.model.Role;
+import com.vetworld.VetWorld.model.User;
 import com.vetworld.VetWorld.repository.*;
 import com.vetworld.VetWorld.security.JwtUtil;
 import com.vetworld.VetWorld.service.*;
@@ -9,6 +11,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -23,6 +26,7 @@ public class AdminController {
     private final ProductRepository productRepository;
     private final CategoryRepository categoryRepository;
     private final BannerRepository bannerRepository;
+    private final UserRepository userRepository;
 
     @Value("${app.admin.username:admin}")
     private String adminUsername;
@@ -35,7 +39,7 @@ public class AdminController {
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody AdminLoginRequest request) {
         if (adminUsername.equals(request.getUsername()) && adminPassword.equals(request.getPassword())) {
-            String token = jwtUtil.generateToken(request.getUsername());
+            String token = jwtUtil.generateToken(request.getUsername(), "ADMIN");
             return ResponseEntity.ok(Map.of("token", token));
         }
         return ResponseEntity.status(401).body(Map.of("error", "Invalid credentials"));
@@ -49,7 +53,8 @@ public class AdminController {
         stats.setTotalProducts(productRepository.count());
         stats.setTotalCategories(categoryRepository.count());
         stats.setTotalBanners(bannerRepository.count());
-        stats.setTopSellingCount(productRepository.findByIsTopSellingTrue().size());
+        stats.setTotalUsers(userRepository.count());
+        stats.setTopSellingCount(productRepository.findByTopSellingTrue().size());
         return ResponseEntity.ok(stats);
     }
 
@@ -58,6 +63,11 @@ public class AdminController {
     @PostMapping("/categories")
     public ResponseEntity<CategoryDto> createCategory(@RequestBody CategoryRequest request) {
         return ResponseEntity.ok(categoryService.createCategory(request));
+    }
+
+    @PutMapping("/categories/{id}")
+    public ResponseEntity<CategoryDto> updateCategory(@PathVariable Long id, @RequestBody CategoryRequest request) {
+        return ResponseEntity.ok(categoryService.updateCategory(id, request));
     }
 
     @DeleteMapping("/categories/{id}")
@@ -96,9 +106,48 @@ public class AdminController {
         return ResponseEntity.ok(bannerService.createBanner(request));
     }
 
+    @PutMapping("/banners/{id}")
+    public ResponseEntity<BannerDto> updateBanner(@PathVariable Long id, @RequestBody BannerRequest request) {
+        return ResponseEntity.ok(bannerService.updateBanner(id, request));
+    }
+
     @DeleteMapping("/banners/{id}")
     public ResponseEntity<Void> deleteBanner(@PathVariable Long id) {
         bannerService.deleteBanner(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    // ── Users ──────────────────────────────────────────────────
+
+    @GetMapping("/users")
+    public ResponseEntity<List<UserDto>> getAllUsers() {
+        List<UserDto> users = userRepository.findAll().stream()
+                .map(UserDto::fromEntity)
+                .toList();
+        return ResponseEntity.ok(users);
+    }
+
+    @PutMapping("/users/{id}/role")
+    public ResponseEntity<UserDto> updateUserRole(@PathVariable Long id, @RequestBody UserRoleUpdateRequest request) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        try {
+            Role newRole = Role.valueOf(request.getRole().toUpperCase());
+            user.setRole(newRole);
+            User updated = userRepository.save(user);
+            return ResponseEntity.ok(UserDto.fromEntity(updated));
+        } catch (IllegalArgumentException e) {
+            throw new RuntimeException("Invalid role: " + request.getRole());
+        }
+    }
+
+    @DeleteMapping("/users/{id}")
+    public ResponseEntity<Void> deleteUser(@PathVariable Long id) {
+        if (!userRepository.existsById(id)) {
+            return ResponseEntity.notFound().build();
+        }
+        userRepository.deleteById(id);
         return ResponseEntity.noContent().build();
     }
 }

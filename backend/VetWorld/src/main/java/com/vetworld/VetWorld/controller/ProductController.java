@@ -18,7 +18,10 @@ public class ProductController {
     @GetMapping
     public ResponseEntity<List<ProductDto>> getAll(
             @RequestParam(required = false) Boolean topSelling,
-            @RequestParam(required = false) Boolean recent) {
+            @RequestParam(required = false) Boolean recent,
+            @RequestParam(required = false) String search) {
+        if (search != null && !search.trim().isEmpty())
+            return ResponseEntity.ok(productService.searchProducts(search.trim()));
         if (Boolean.TRUE.equals(topSelling))
             return ResponseEntity.ok(productService.getTopSelling());
         if (Boolean.TRUE.equals(recent))

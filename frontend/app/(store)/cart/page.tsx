@@ -9,7 +9,7 @@ export default function CartPage() {
     const grandTotal = totalPrice();
 
     const handleWhatsAppOrder = () => {
-        const phone = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || "1234567890";
+        const phone = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || "94773300802";
 
         let message = "Hello VetWorld,\nI would like to order the following items:\n\n";
         items.forEach((item, i) => {

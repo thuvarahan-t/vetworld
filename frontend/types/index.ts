@@ -19,7 +19,7 @@ export interface Product {
     description: string;
     imageUrl: string;
     category: Category;
-    isTopSelling: boolean;
+    topSelling: boolean;
     createdAt?: string;
     types: ProductType[];
 }
