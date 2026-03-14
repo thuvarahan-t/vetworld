@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
+import { adminApi } from "@/lib/api";
 
 interface AdminStats {
     totalProducts: number;
@@ -19,12 +20,7 @@ export default function AdminDashboardPage() {
     useEffect(() => {
         const fetchStats = async () => {
             try {
-                const token = localStorage.getItem("vetworld_token");
-                const res = await fetch("http://localhost:8080/api/admin/stats", {
-                    headers: { "Authorization": `Bearer ${token}` }
-                });
-                if (!res.ok) throw new Error("Failed to fetch stats");
-                const data = await res.json();
+                const data = await adminApi.getStats();
                 setStats(data);
             } catch (err: any) {
                 setError(err.message);

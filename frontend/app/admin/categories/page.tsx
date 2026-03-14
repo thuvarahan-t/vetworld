@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import ImageUpload from "@/components/ui/ImageUpload";
 
 interface Category {
     id: number;
@@ -227,11 +228,10 @@ export default function AdminCategoriesPage() {
                                         />
                                     </div>
                                     <div>
-                                        <label style={{ display: "block", fontSize: "0.85rem", fontWeight: 600, color: "var(--text-secondary)", marginBottom: "0.4rem" }}>Image URL (Optional)</label>
-                                        <input
-                                            type="url" value={imageUrl} onChange={e => setImageUrl(e.target.value)}
-                                            style={{ width: "100%", padding: "0.75rem", borderRadius: "var(--radius-sm)", border: "1px solid var(--border)", background: "var(--bg)", color: "var(--text-primary)" }}
-                                            placeholder="https://example.com/image.png"
+                                        <ImageUpload
+                                            label="Category Image (Optional)"
+                                            value={imageUrl}
+                                            onUpload={(url: string) => setImageUrl(url)}
                                         />
                                     </div>
                                     <div style={{ display: "flex", gap: "0.75rem", marginTop: "0.5rem" }}>

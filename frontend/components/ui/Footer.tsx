@@ -1,3 +1,5 @@
+import Image from "next/image";
+
 export default function Footer() {
     return (
         <footer
@@ -11,7 +13,10 @@ export default function Footer() {
             }}
         >
             <div className="container-main">
-                <p style={{ fontWeight: 700, fontSize: "1.1rem", marginBottom: "0.5rem" }}>🐾 VetWorld</p>
+                <div style={{ display: "inline-flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.5rem" }}>
+                    <Image src="/logo.png" alt="VetWorld logo" width={28} height={28} />
+                    <p style={{ fontWeight: 700, fontSize: "1.1rem", margin: 0 }}>VetWorld</p>
+                </div>
                 <p style={{ opacity: 0.6 }}>Your one-stop veterinary &amp; lab equipment store</p>
                 <p style={{ opacity: 0.4, marginTop: "1rem" }}>&copy; {new Date().getFullYear()} VetWorld. All rights reserved.</p>
             </div>

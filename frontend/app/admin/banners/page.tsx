@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import ImageUpload from "@/components/ui/ImageUpload";
 
 interface Banner {
     id: number;
@@ -177,10 +178,11 @@ export default function AdminBannersPage() {
                                 <h2 style={{ marginBottom: "1.5rem", fontSize: "1.5rem" }}>{editingId ? "Edit Banner" : "Create Banner"}</h2>
                                 <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "1.2rem" }}>
                                     <div>
-                                        <label style={{ display: "block", fontSize: "0.85rem", fontWeight: 600, color: "var(--text-secondary)", marginBottom: "0.4rem" }}>Image URL</label>
-                                        <input type="url" required value={imageUrl} onChange={e => setImageUrl(e.target.value)}
-                                            style={{ width: "100%", padding: "0.75rem", borderRadius: "var(--radius-sm)", border: "1px solid var(--border)", background: "var(--bg)", color: "var(--text-primary)" }}
-                                            placeholder="https://..." />
+                                        <ImageUpload
+                                            label="Banner Image"
+                                            value={imageUrl}
+                                            onUpload={(url: string) => setImageUrl(url)}
+                                        />
                                     </div>
                                     <div>
                                         <label style={{ display: "block", fontSize: "0.85rem", fontWeight: 600, color: "var(--text-secondary)", marginBottom: "0.4rem" }}>Redirect Link (Optional)</label>

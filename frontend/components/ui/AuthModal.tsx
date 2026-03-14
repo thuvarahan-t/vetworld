@@ -22,6 +22,18 @@ const labelStyle: React.CSSProperties = {
     color: "var(--text-secondary)", marginBottom: "0.3rem",
 };
 
+const inputStyle: React.CSSProperties = {
+    width: "100%",
+    padding: "0.6rem 0.9rem",
+    border: "1.5px solid var(--border)",
+    borderRadius: "var(--radius-sm)",
+    fontSize: "0.9rem",
+    color: "var(--text-primary)",
+    background: "var(--surface)",
+    outline: "none",
+    transition: "border var(--transition), box-shadow var(--transition)",
+};
+
 function ErrorBox({ msg }: { msg: string }) {
     return (
         <div style={{ padding: "0.75rem", borderRadius: "var(--radius-sm)", background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)", color: "rgb(239,68,68)", fontSize: "0.85rem", textAlign: "center" }}>
@@ -378,3 +390,4 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }: Props) {
         </AnimatePresence>
     );
 }
+  

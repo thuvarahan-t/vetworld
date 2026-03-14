@@ -22,7 +22,10 @@ export default function AdminUsersPage() {
             const res = await fetch("http://localhost:8080/api/admin/users", {
                 headers: { "Authorization": `Bearer ${token}` }
             });
-            if (!res.ok) throw new Error("Failed to fetch users");
+            if (!res.ok) {
+                const body = await res.text();
+                throw new Error(`Failed to fetch users [${res.status}]${body ? `: ${body}` : ""}`);
+            }
             const data = await res.json();
             setUsers(data);
         } catch (err: any) {

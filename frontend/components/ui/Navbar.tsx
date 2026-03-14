@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import Image from "next/image";
 import { useCartStore } from "@/store/cartStore";
 import { motion } from "framer-motion";
 import { useState, useEffect } from "react";
@@ -213,7 +214,7 @@ export default function Navbar() {
             <div className="container-main" style={{ display: "flex", alignItems: "center", height: 64, gap: "1.5rem" }}>
                 {/* Logo */}
                 <Link href="/" style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontWeight: 800, fontSize: "1.25rem", color: "var(--vet-blue)" }}>
-                    <span style={{ fontSize: "1.5rem" }}>🐾</span>
+                    <Image src="/logo.png" alt="VetWorld logo" width={34} height={34} priority />
                     <span>VetWorld</span>
                 </Link>
 
@@ -293,7 +294,7 @@ export default function Navbar() {
                     >
                         <CartIcon />
                         <span>Cart</span>
-                        {totalItems > 0 && (
+                        {isMounted && totalItems > 0 && (
                             <motion.span
                                 initial={{ scale: 0 }}
                                 animate={{ scale: 1 }}

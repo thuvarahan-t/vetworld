@@ -57,4 +57,5 @@ export interface AdminStats {
     totalCategories: number;
     totalBanners: number;
     topSellingCount: number;
+    totalUsers: number;
 }
