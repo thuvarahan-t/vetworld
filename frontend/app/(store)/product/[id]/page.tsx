@@ -38,13 +38,15 @@ export default function ProductDetailPage({ params }: Props) {
 
     if (loading) return <LoadingState />;
     if (!product) return <NotFound />;
+    const isSoldOut = !!product.soldOut || !!selectedType?.soldOut;
 
     const handleAddToCart = (e: React.MouseEvent) => {
-        if (!selectedType) return;
+        if (!selectedType || isSoldOut) return;
         addItem({
             productId: product.id,
             productName: product.name,
-            productImage: product.imageUrl,
+            productKey: selectedType.projectKey,
+            productImage: selectedType.imageUrl || product.imageUrl,
             typeId: selectedType.id,
             typeName: selectedType.typeName,
             unitPrice: selectedType.price,
@@ -106,8 +108,8 @@ export default function ProductDetailPage({ params }: Props) {
                         justifyContent: "center",
                     }}
                 >
-                    {product.imageUrl ? (
-                        <img src={product.imageUrl} alt={product.name} style={{ width: "100%", height: "100%", objectFit: "contain", padding: "1.5rem" }} />
+                    {selectedType?.imageUrl || product.imageUrl ? (
+                        <img src={selectedType?.imageUrl || product.imageUrl} alt={product.name} style={{ width: "100%", height: "100%", objectFit: "contain", padding: "1.5rem" }} />
                     ) : (
                         <span style={{ fontSize: "6rem" }}>🧪</span>
                     )}
@@ -123,6 +125,17 @@ export default function ProductDetailPage({ params }: Props) {
                             }}
                         >
                             🔥 Top Selling
+                        </span>
+                    )}
+
+                    {isSoldOut && (
+                        <span
+                            style={{
+                                display: "inline-block", background: "rgb(220, 38, 38)", color: "#fff",
+                                fontSize: "0.75rem", fontWeight: 800, padding: "3px 10px", borderRadius: 999, marginBottom: "0.75rem", marginLeft: product.topSelling ? "0.5rem" : 0,
+                            }}
+                        >
+                            Sold Out
                         </span>
                     )}
 
@@ -194,10 +207,18 @@ export default function ProductDetailPage({ params }: Props) {
                         <button
                             onClick={handleAddToCart}
                             className={added ? "btn-green" : "btn-primary"}
-                            style={{ flex: 1, justifyContent: "center", fontSize: "1rem", padding: "0.75rem" }}
-                            disabled={!selectedType}
+                            style={{
+                                flex: 1,
+                                justifyContent: "center",
+                                fontSize: "1rem",
+                                padding: "0.75rem",
+                                background: isSoldOut ? "rgb(220, 38, 38)" : undefined,
+                                cursor: isSoldOut ? "not-allowed" : "pointer",
+                                opacity: isSoldOut ? 0.95 : 1,
+                            }}
+                            disabled={!selectedType || isSoldOut}
                         >
-                            {added ? "✓ Added to Cart!" : "Add to Cart"}
+                            {isSoldOut ? "Sold Out" : (added ? "✓ Added to Cart!" : "Add to Cart")}
                         </button>
                     </div>
 

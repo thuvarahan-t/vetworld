@@ -11,6 +11,9 @@ export interface ProductType {
     id: number;
     typeName: string;
     price: number;
+    imageUrl?: string;
+    projectKey?: string;
+    soldOut?: boolean;
 }
 
 export interface Product {
@@ -20,6 +23,7 @@ export interface Product {
     imageUrl: string;
     category: Category;
     topSelling: boolean;
+    soldOut?: boolean;
     createdAt?: string;
     types: ProductType[];
 }
@@ -36,6 +40,7 @@ export interface Banner {
 export interface CartItem {
     productId: number;
     productName: string;
+    productKey?: string;
     productImage: string;
     typeId: number;
     typeName: string;

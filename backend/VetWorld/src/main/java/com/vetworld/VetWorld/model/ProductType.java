@@ -23,6 +23,15 @@ public class ProductType {
     @Column(name = "type_name", nullable = false)
     private String typeName;
 
+    @Column(name = "image_url", length = 1000)
+    private String imageUrl;
+
+    @Column(name = "project_key", length = 120)
+    private String projectKey;
+
+    @Column(name = "is_sold_out", nullable = false)
+    private boolean soldOut = false;
+
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal price;
 }

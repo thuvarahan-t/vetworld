@@ -6,6 +6,7 @@ import com.vetworld.VetWorld.model.User;
 import com.vetworld.VetWorld.repository.*;
 import com.vetworld.VetWorld.security.JwtUtil;
 import com.vetworld.VetWorld.service.*;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
@@ -37,7 +38,7 @@ public class AdminController {
     // ── Auth ──────────────────────────────────────────────────
 
     @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody AdminLoginRequest request) {
+    public ResponseEntity<?> login(@Valid @RequestBody AdminLoginRequest request) {
         if (adminUsername.equals(request.getUsername()) && adminPassword.equals(request.getPassword())) {
             String token = jwtUtil.generateToken(request.getUsername(), "ADMIN");
             return ResponseEntity.ok(Map.of("token", token));
@@ -61,12 +62,12 @@ public class AdminController {
     // ── Categories ─────────────────────────────────────────────
 
     @PostMapping("/categories")
-    public ResponseEntity<CategoryDto> createCategory(@RequestBody CategoryRequest request) {
+    public ResponseEntity<CategoryDto> createCategory(@Valid @RequestBody CategoryRequest request) {
         return ResponseEntity.ok(categoryService.createCategory(request));
     }
 
     @PutMapping("/categories/{id}")
-    public ResponseEntity<CategoryDto> updateCategory(@PathVariable Long id, @RequestBody CategoryRequest request) {
+    public ResponseEntity<CategoryDto> updateCategory(@PathVariable Long id, @Valid @RequestBody CategoryRequest request) {
         return ResponseEntity.ok(categoryService.updateCategory(id, request));
     }
 
@@ -79,12 +80,12 @@ public class AdminController {
     // ── Products ───────────────────────────────────────────────
 
     @PostMapping("/products")
-    public ResponseEntity<ProductDto> createProduct(@RequestBody ProductRequest request) {
+    public ResponseEntity<ProductDto> createProduct(@Valid @RequestBody ProductRequest request) {
         return ResponseEntity.ok(productService.createProduct(request));
     }
 
     @PutMapping("/products/{id}")
-    public ResponseEntity<ProductDto> updateProduct(@PathVariable Long id, @RequestBody ProductRequest request) {
+    public ResponseEntity<ProductDto> updateProduct(@PathVariable Long id, @Valid @RequestBody ProductRequest request) {
         return ResponseEntity.ok(productService.updateProduct(id, request));
     }
 
@@ -99,15 +100,25 @@ public class AdminController {
         return ResponseEntity.ok(productService.toggleTopSelling(id));
     }
 
+    @PutMapping("/products/{id}/sold-out")
+    public ResponseEntity<ProductDto> toggleSoldOut(@PathVariable Long id) {
+        return ResponseEntity.ok(productService.toggleSoldOut(id));
+    }
+
+    @PutMapping("/products/{productId}/types/{typeId}/sold-out")
+    public ResponseEntity<ProductDto> toggleTypeSoldOut(@PathVariable Long productId, @PathVariable Long typeId) {
+        return ResponseEntity.ok(productService.toggleTypeSoldOut(productId, typeId));
+    }
+
     // ── Banners ────────────────────────────────────────────────
 
     @PostMapping("/banners")
-    public ResponseEntity<BannerDto> createBanner(@RequestBody BannerRequest request) {
+    public ResponseEntity<BannerDto> createBanner(@Valid @RequestBody BannerRequest request) {
         return ResponseEntity.ok(bannerService.createBanner(request));
     }
 
     @PutMapping("/banners/{id}")
-    public ResponseEntity<BannerDto> updateBanner(@PathVariable Long id, @RequestBody BannerRequest request) {
+    public ResponseEntity<BannerDto> updateBanner(@PathVariable Long id, @Valid @RequestBody BannerRequest request) {
         return ResponseEntity.ok(bannerService.updateBanner(id, request));
     }
 
@@ -128,7 +139,7 @@ public class AdminController {
     }
 
     @PutMapping("/users/{id}/role")
-    public ResponseEntity<UserDto> updateUserRole(@PathVariable Long id, @RequestBody UserRoleUpdateRequest request) {
+    public ResponseEntity<UserDto> updateUserRole(@PathVariable Long id, @Valid @RequestBody UserRoleUpdateRequest request) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 

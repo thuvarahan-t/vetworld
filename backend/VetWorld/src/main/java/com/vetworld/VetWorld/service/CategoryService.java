@@ -5,6 +5,7 @@ import com.vetworld.VetWorld.dto.CategoryRequest;
 import com.vetworld.VetWorld.model.Category;
 import com.vetworld.VetWorld.repository.CategoryRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,11 +31,13 @@ public class CategoryService {
 
     @Transactional
     public CategoryDto createCategory(CategoryRequest request) {
-        if (categoryRepository.existsByName(request.getName())) {
-            throw new RuntimeException("Category with name '" + request.getName() + "' already exists");
+        String normalizedName = request.getName().trim();
+
+        if (categoryRepository.existsByName(normalizedName)) {
+            throw new RuntimeException("Category with name '" + normalizedName + "' already exists");
         }
         Category category = new Category();
-        category.setName(request.getName());
+        category.setName(normalizedName);
         category.setImageUrl(request.getImageUrl());
         return toDto(categoryRepository.save(category));
     }
@@ -44,19 +47,28 @@ public class CategoryService {
         Category category = categoryRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Category not found with id: " + id));
 
+        String normalizedName = request.getName().trim();
+
         // Only check name existence if name is changed
-        if (!category.getName().equals(request.getName()) && categoryRepository.existsByName(request.getName())) {
-            throw new RuntimeException("Category with name '" + request.getName() + "' already exists");
+        if (!category.getName().equals(normalizedName) && categoryRepository.existsByName(normalizedName)) {
+            throw new RuntimeException("Category with name '" + normalizedName + "' already exists");
         }
 
-        category.setName(request.getName());
+        category.setName(normalizedName);
         category.setImageUrl(request.getImageUrl());
         return toDto(categoryRepository.save(category));
     }
 
     @Transactional
     public void deleteCategory(Long id) {
-        categoryRepository.deleteById(id);
+        if (!categoryRepository.existsById(id)) {
+            throw new RuntimeException("Category not found with id: " + id);
+        }
+        try {
+            categoryRepository.deleteById(id);
+        } catch (DataIntegrityViolationException ex) {
+            throw new RuntimeException("Cannot delete category with existing products. Remove products first.");
+        }
     }
 
     public CategoryDto toDto(Category c) {

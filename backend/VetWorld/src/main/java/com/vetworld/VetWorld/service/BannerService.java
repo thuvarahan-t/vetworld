@@ -41,6 +41,9 @@ public class BannerService {
 
     @Transactional
     public void deleteBanner(Long id) {
+        if (!bannerRepository.existsById(id)) {
+            throw new RuntimeException("Banner not found with id: " + id);
+        }
         bannerRepository.deleteById(id);
     }
 

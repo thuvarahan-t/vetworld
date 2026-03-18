@@ -35,6 +35,9 @@ public class Product {
     @Column(name = "is_top_selling", nullable = false)
     private boolean topSelling = false;
 
+    @Column(name = "is_sold_out", nullable = false)
+    private boolean soldOut = false;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

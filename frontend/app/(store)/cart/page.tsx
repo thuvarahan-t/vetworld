@@ -14,6 +14,9 @@ export default function CartPage() {
         let message = "Hello VetWorld,\nI would like to order the following items:\n\n";
         items.forEach((item, i) => {
             message += `${i + 1}. ${item.productName}\n`;
+            if (item.productKey) {
+                message += `   Product Key: ${item.productKey}\n`;
+            }
             message += `   Type: ${item.typeName}\n`;
             message += `   Quantity: ${item.quantity}\n`;
             message += `   Price: Rs.${item.unitPrice.toLocaleString()}\n`;
@@ -90,6 +93,11 @@ export default function CartPage() {
                                 {/* Info */}
                                 <div style={{ flex: 1 }}>
                                     <p style={{ fontWeight: 600, color: "var(--text-primary)", marginBottom: "0.2rem" }}>{item.productName}</p>
+                                    {item.productKey && (
+                                        <p style={{ fontSize: "0.78rem", color: "var(--text-muted)", marginBottom: "0.2rem" }}>
+                                            Product Key: {item.productKey}
+                                        </p>
+                                    )}
                                     <p style={{ fontSize: "0.82rem", color: "var(--text-secondary)", marginBottom: "0.5rem" }}>Type: {item.typeName}</p>
                                     <p style={{ fontWeight: 700, color: "var(--vet-blue)" }}>Rs. {item.unitPrice.toLocaleString()} each</p>
                                 </div>

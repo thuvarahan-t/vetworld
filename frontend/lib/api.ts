@@ -81,7 +81,8 @@ export const adminApi = {
         imageUrl: string;
         categoryId: number;
         topSelling?: boolean;
-        types: { typeName: string; price: number }[];
+        soldOut?: boolean;
+        types: { typeName: string; price: number; imageUrl?: string; projectKey?: string; soldOut?: boolean }[];
     }) =>
         authFetcher<Product>("/admin/products", { method: "POST", body: JSON.stringify(data) }),
     updateProduct: (id: number, data: {
@@ -90,13 +91,18 @@ export const adminApi = {
         imageUrl: string;
         categoryId: number;
         topSelling?: boolean;
-        types: { typeName: string; price: number }[];
+        soldOut?: boolean;
+        types: { typeName: string; price: number; imageUrl?: string; projectKey?: string; soldOut?: boolean }[];
     }) =>
         authFetcher<Product>(`/admin/products/${id}`, { method: "PUT", body: JSON.stringify(data) }),
     deleteProduct: (id: number) =>
         authFetcher<void>(`/admin/products/${id}`, { method: "DELETE" }),
     toggleTopSelling: (id: number) =>
         authFetcher<Product>(`/admin/products/${id}/top-selling`, { method: "PUT" }),
+    toggleSoldOut: (id: number) =>
+        authFetcher<Product>(`/admin/products/${id}/sold-out`, { method: "PUT" }),
+    toggleTypeSoldOut: (productId: number, typeId: number) =>
+        authFetcher<Product>(`/admin/products/${productId}/types/${typeId}/sold-out`, { method: "PUT" }),
 
     // Banners
     createBanner: (data: { imageUrl: string; redirectLink?: string | null }) =>

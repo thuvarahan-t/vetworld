@@ -40,6 +40,11 @@ public class JwtUtil {
                 .parseSignedClaims(token).getPayload().getSubject();
     }
 
+    public String extractRole(String token) {
+        return Jwts.parser().verifyWith(getKey()).build()
+                .parseSignedClaims(token).getPayload().get("role", String.class);
+    }
+
     public boolean validateToken(String token) {
         try {
             Jwts.parser().verifyWith(getKey()).build().parseSignedClaims(token);

@@ -19,6 +19,11 @@ export const metadata: Metadata = {
   },
   description: "Your one-stop veterinary and laboratory equipment e-commerce platform. Browse, add to cart, and order via WhatsApp.",
   keywords: ["veterinary equipment", "lab supplies", "science equipment", "VetWorld"],
+  icons: {
+    icon: "/logo2.png?v=3",
+    shortcut: "/logo2.png?v=3",
+    apple: "/logo2.png?v=3",
+  },
 };
 
 export default function RootLayout({

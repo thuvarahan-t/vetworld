@@ -7,9 +7,17 @@ interface ImageUploadProps {
     onUpload: (url: string) => void;
     value?: string;
     label?: string;
+    compact?: boolean;
+    enableGlobalPaste?: boolean;
 }
 
-export default function ImageUpload({ onUpload, value, label = "Image" }: ImageUploadProps) {
+export default function ImageUpload({
+    onUpload,
+    value,
+    label = "Image",
+    compact = false,
+    enableGlobalPaste = true,
+}: ImageUploadProps) {
     const [isUploading, setIsUploading] = useState(false);
     const [isDragOver, setIsDragOver] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -60,6 +68,19 @@ export default function ImageUpload({ onUpload, value, label = "Image" }: ImageU
         }
     };
 
+    const handlePasteItems = (items: DataTransferItemList | null | undefined) => {
+        if (!items) return;
+        for (let i = 0; i < items.length; i++) {
+            if (items[i].type.startsWith("image/")) {
+                const file = items[i].getAsFile();
+                if (file) {
+                    uploadToCloudinary(file);
+                    break;
+                }
+            }
+        }
+    };
+
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
@@ -87,35 +108,26 @@ export default function ImageUpload({ onUpload, value, label = "Image" }: ImageU
         setIsDragOver(false);
     }, []);
 
-    // Handle paste events globally when this component is mounted
+    // Global paste is useful for single image fields; disabled in repeating rows to avoid multi-upload collisions.
     useEffect(() => {
+        if (!enableGlobalPaste) {
+            return;
+        }
+
         const handlePaste = (e: ClipboardEvent) => {
-            // Don't intercept if user is typing in a text input or textarea
             const target = e.target as HTMLElement;
             if (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable) {
-                // Only ignore if the input isn't our file input
                 if (target.getAttribute("type") !== "file") {
                     return;
                 }
             }
 
-            const items = e.clipboardData?.items;
-            if (!items) return;
-
-            for (let i = 0; i < items.length; i++) {
-                if (items[i].type.startsWith("image/")) {
-                    const file = items[i].getAsFile();
-                    if (file) {
-                        uploadToCloudinary(file);
-                        break; // Only upload the first image found
-                    }
-                }
-            }
+            handlePasteItems(e.clipboardData?.items);
         };
 
         window.addEventListener("paste", handlePaste);
         return () => window.removeEventListener("paste", handlePaste);
-    }, []);
+    }, [enableGlobalPaste]);
 
 
     return (
@@ -125,8 +137,8 @@ export default function ImageUpload({ onUpload, value, label = "Image" }: ImageU
             </label>
 
             {value ? (
-                <div style={{ position: "relative", borderRadius: "var(--radius-md)", overflow: "hidden", border: "1px solid var(--border)", background: "var(--bg)", display: "flex", alignItems: "center", justifyContent: "center", minHeight: "200px" }}>
-                    <img src={value} alt="Uploaded preview" style={{ maxWidth: "100%", maxHeight: "300px", objectFit: "contain" }} />
+                <div style={{ position: "relative", borderRadius: "var(--radius-md)", overflow: "hidden", border: "1px solid var(--border)", background: "var(--bg)", display: "flex", alignItems: "center", justifyContent: "center", minHeight: compact ? "96px" : "200px" }}>
+                    <img src={value} alt="Uploaded preview" style={{ maxWidth: "100%", maxHeight: compact ? "120px" : "300px", objectFit: "contain" }} />
 
                     <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.4)", display: "flex", alignItems: "center", justifyContent: "center", opacity: 0, transition: "opacity 0.2s ease" }}
                         onMouseEnter={e => e.currentTarget.style.opacity = "1"}
@@ -147,6 +159,11 @@ export default function ImageUpload({ onUpload, value, label = "Image" }: ImageU
                     onDrop={handleDrop}
                     onDragOver={handleDragOver}
                     onDragLeave={handleDragLeave}
+                    onPaste={(e) => {
+                        e.preventDefault();
+                        handlePasteItems(e.clipboardData?.items);
+                    }}
+                    tabIndex={0}
                     animate={{
                         borderColor: isDragOver ? "var(--vet-blue)" : "var(--border)",
                         backgroundColor: isDragOver ? "rgba(43, 89, 212, 0.05)" : "var(--bg)"
@@ -154,17 +171,18 @@ export default function ImageUpload({ onUpload, value, label = "Image" }: ImageU
                     style={{
                         border: "2px dashed",
                         borderRadius: "var(--radius-md)",
-                        padding: "2rem",
+                        padding: compact ? "0.8rem" : "2rem",
                         textAlign: "center",
                         cursor: isUploading ? "wait" : "pointer",
                         position: "relative",
                         transition: "all 0.2s ease",
-                        minHeight: "150px",
+                        minHeight: compact ? "88px" : "150px",
+                        outline: "none",
                         display: "flex",
                         flexDirection: "column",
                         alignItems: "center",
                         justifyContent: "center",
-                        gap: "1rem"
+                        gap: compact ? "0.35rem" : "1rem"
                     }}
                 >
                     <input
@@ -194,19 +212,21 @@ export default function ImageUpload({ onUpload, value, label = "Image" }: ImageU
                         </div>
                     ) : (
                         <>
-                            <div style={{ color: "var(--text-secondary)", background: "rgba(0,0,0,0.05)", padding: "1rem", borderRadius: "50%", display: "inline-flex", marginBottom: "0.5rem" }}>
-                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-                                    <circle cx="8.5" cy="8.5" r="1.5" />
-                                    <polyline points="21 15 16 10 5 21" />
-                                </svg>
-                            </div>
+                            {!compact && (
+                                <div style={{ color: "var(--text-secondary)", background: "rgba(0,0,0,0.05)", padding: "1rem", borderRadius: "50%", display: "inline-flex", marginBottom: "0.5rem" }}>
+                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                                        <circle cx="8.5" cy="8.5" r="1.5" />
+                                        <polyline points="21 15 16 10 5 21" />
+                                    </svg>
+                                </div>
+                            )}
                             <div>
-                                <p style={{ margin: 0, fontWeight: 600, color: "var(--text-primary)", fontSize: "1rem" }}>
-                                    Click to upload, drag and drop
+                                <p style={{ margin: 0, fontWeight: 600, color: "var(--text-primary)", fontSize: compact ? "0.82rem" : "1rem" }}>
+                                    Click / Drag / Paste image
                                 </p>
-                                <p style={{ margin: "0.25rem 0 0 0", color: "var(--text-secondary)", fontSize: "0.85rem" }}>
-                                    or <kbd style={{ padding: "0.1rem 0.4rem", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "4px", fontSize: "0.75rem", fontFamily: "monospace" }}>Ctrl+V</kbd> to paste
+                                <p style={{ margin: "0.2rem 0 0 0", color: "var(--text-secondary)", fontSize: compact ? "0.75rem" : "0.85rem" }}>
+                                    <kbd style={{ padding: "0.1rem 0.4rem", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "4px", fontSize: "0.75rem", fontFamily: "monospace" }}>Ctrl+V</kbd> supported
                                 </p>
                             </div>
                         </>
