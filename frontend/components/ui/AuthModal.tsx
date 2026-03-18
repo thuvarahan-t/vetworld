@@ -110,7 +110,7 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }: Props) {
     const handleLoginSubmit = async (e: React.FormEvent) => {
         e.preventDefault(); setErrorMsg(""); setIsLoading(true);
         try {
-            const res = await fetch("http://localhost:8080/api/auth/login", {
+            const res = await fetch("/api/auth/login", {
                 method: "POST", headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ email, password }),
             });
@@ -127,7 +127,7 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }: Props) {
     const handleSignupSubmit = async (e: React.FormEvent) => {
         e.preventDefault(); setErrorMsg(""); setIsLoading(true);
         try {
-            const res = await fetch("http://localhost:8080/api/auth/send-signup-otp", {
+            const res = await fetch("/api/auth/send-signup-otp", {
                 method: "POST", headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ email }),
             });
@@ -143,7 +143,7 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }: Props) {
     const handleSignupOtpSubmit = async (e: React.FormEvent) => {
         e.preventDefault(); setErrorMsg(""); setIsLoading(true);
         try {
-            const res = await fetch("http://localhost:8080/api/auth/signup", {
+            const res = await fetch("/api/auth/signup", {
                 method: "POST", headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ name, email, password, phone, address, otp }),
             });
@@ -160,7 +160,7 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }: Props) {
     const handleForgotSubmit = async (e: React.FormEvent) => {
         e.preventDefault(); setErrorMsg(""); setIsLoading(true);
         try {
-            const res = await fetch("http://localhost:8080/api/auth/forgot-password", {
+            const res = await fetch("/api/auth/forgot-password", {
                 method: "POST", headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ email: forgotEmail }),
             });
@@ -175,7 +175,7 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }: Props) {
     const handleResetSubmit = async (e: React.FormEvent) => {
         e.preventDefault(); setErrorMsg(""); setIsLoading(true);
         try {
-            const res = await fetch("http://localhost:8080/api/auth/reset-password", {
+            const res = await fetch("/api/auth/reset-password", {
                 method: "POST", headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ email: forgotEmail, resetCode, newPassword }),
             });

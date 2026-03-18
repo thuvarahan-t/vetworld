@@ -54,8 +54,8 @@ export default function AdminProductsPage() {
         setIsLoading(true);
         try {
             const [prodRes, catRes] = await Promise.all([
-                fetch("http://localhost:8080/api/products"),
-                fetch("http://localhost:8080/api/categories")
+                fetch("/api/products"),
+                fetch("/api/categories")
             ]);
             if (!prodRes.ok || !catRes.ok) throw new Error("Failed to fetch data");
 
@@ -74,7 +74,7 @@ export default function AdminProductsPage() {
         if (!confirm("Are you sure you want to delete this product?")) return;
         try {
             const token = localStorage.getItem("vetworld_token");
-            const res = await fetch(`http://localhost:8080/api/admin/products/${id}`, {
+            const res = await fetch(`/api/admin/products/${id}`, {
                 method: "DELETE", headers: { "Authorization": `Bearer ${token}` }
             });
             if (!res.ok) throw new Error("Failed to delete product");
@@ -85,7 +85,7 @@ export default function AdminProductsPage() {
     const toggleTopSelling = async (id: number) => {
         try {
             const token = localStorage.getItem("vetworld_token");
-            const res = await fetch(`http://localhost:8080/api/admin/products/${id}/top-selling`, {
+            const res = await fetch(`/api/admin/products/${id}/top-selling`, {
                 method: "PUT", headers: { "Authorization": `Bearer ${token}` }
             });
             if (!res.ok) throw new Error("Failed to toggle top-selling status");
@@ -97,7 +97,7 @@ export default function AdminProductsPage() {
     const toggleProductSoldOut = async (id: number) => {
         try {
             const token = localStorage.getItem("vetworld_token");
-            const res = await fetch(`http://localhost:8080/api/admin/products/${id}/sold-out`, {
+            const res = await fetch(`/api/admin/products/${id}/sold-out`, {
                 method: "PUT", headers: { "Authorization": `Bearer ${token}` }
             });
             if (!res.ok) throw new Error("Failed to toggle sold-out status");
@@ -109,7 +109,7 @@ export default function AdminProductsPage() {
     const toggleTypeSoldOut = async (productId: number, typeId: number) => {
         try {
             const token = localStorage.getItem("vetworld_token");
-            const res = await fetch(`http://localhost:8080/api/admin/products/${productId}/types/${typeId}/sold-out`, {
+            const res = await fetch(`/api/admin/products/${productId}/types/${typeId}/sold-out`, {
                 method: "PUT", headers: { "Authorization": `Bearer ${token}` }
             });
             if (!res.ok) throw new Error("Failed to toggle type sold-out status");
@@ -149,8 +149,8 @@ export default function AdminProductsPage() {
             };
             const isEditing = editingId !== null;
             const url = isEditing
-                ? `http://localhost:8080/api/admin/products/${editingId}`
-                : "http://localhost:8080/api/admin/products";
+                ? `/api/admin/products/${editingId}`
+                : "/api/admin/products";
 
             const res = await fetch(url, {
                 method: isEditing ? "PUT" : "POST",

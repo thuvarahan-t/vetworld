@@ -25,7 +25,7 @@ export default function AdminBannersPage() {
     const fetchBanners = async () => {
         setIsLoading(true);
         try {
-            const res = await fetch("http://localhost:8080/api/banners");
+            const res = await fetch("/api/banners");
             if (!res.ok) throw new Error("Failed to fetch banners");
             const data = await res.json();
             setBanners(data);
@@ -42,7 +42,7 @@ export default function AdminBannersPage() {
         if (!confirm("Are you sure you want to remove this banner?")) return;
         try {
             const token = localStorage.getItem("vetworld_token");
-            const res = await fetch(`http://localhost:8080/api/admin/banners/${id}`, {
+            const res = await fetch(`/api/admin/banners/${id}`, {
                 method: "DELETE", headers: { "Authorization": `Bearer ${token}` }
             });
             if (!res.ok) throw new Error("Failed to delete banner");
@@ -57,8 +57,8 @@ export default function AdminBannersPage() {
             const token = localStorage.getItem("vetworld_token");
             const isEditing = editingId !== null;
             const url = isEditing
-                ? `http://localhost:8080/api/admin/banners/${editingId}`
-                : "http://localhost:8080/api/admin/banners";
+                ? `/api/admin/banners/${editingId}`
+                : "/api/admin/banners";
             const method = isEditing ? "PUT" : "POST";
 
             const res = await fetch(url, {

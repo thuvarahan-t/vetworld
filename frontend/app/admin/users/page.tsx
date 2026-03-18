@@ -19,7 +19,7 @@ export default function AdminUsersPage() {
         setIsLoading(true);
         try {
             const token = localStorage.getItem("vetworld_token");
-            const res = await fetch("http://localhost:8080/api/admin/users", {
+            const res = await fetch("/api/admin/users", {
                 headers: { "Authorization": `Bearer ${token}` }
             });
             if (!res.ok) {
@@ -41,7 +41,7 @@ export default function AdminUsersPage() {
         if (!confirm("Are you sure you want to permanently delete this user account?")) return;
         try {
             const token = localStorage.getItem("vetworld_token");
-            const res = await fetch(`http://localhost:8080/api/admin/users/${id}`, {
+            const res = await fetch(`/api/admin/users/${id}`, {
                 method: "DELETE", headers: { "Authorization": `Bearer ${token}` }
             });
             if (!res.ok) throw new Error("Failed to delete user");
@@ -55,7 +55,7 @@ export default function AdminUsersPage() {
 
         try {
             const token = localStorage.getItem("vetworld_token");
-            const res = await fetch(`http://localhost:8080/api/admin/users/${id}/role`, {
+            const res = await fetch(`/api/admin/users/${id}/role`, {
                 method: "PUT",
                 headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
                 body: JSON.stringify({ role: newRole })

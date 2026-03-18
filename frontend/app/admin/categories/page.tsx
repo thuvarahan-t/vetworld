@@ -25,7 +25,7 @@ export default function AdminCategoriesPage() {
     const fetchCategories = async () => {
         setIsLoading(true);
         try {
-            const res = await fetch("http://localhost:8080/api/categories");
+            const res = await fetch("/api/categories");
             if (!res.ok) throw new Error("Failed to fetch categories");
             const data = await res.json();
             setCategories(data);
@@ -44,7 +44,7 @@ export default function AdminCategoriesPage() {
         if (!confirm("Are you sure you want to delete this category?")) return;
         try {
             const token = localStorage.getItem("vetworld_token");
-            const res = await fetch(`http://localhost:8080/api/admin/categories/${id}`, {
+            const res = await fetch(`/api/admin/categories/${id}`, {
                 method: "DELETE",
                 headers: { "Authorization": `Bearer ${token}` }
             });
@@ -62,8 +62,8 @@ export default function AdminCategoriesPage() {
             const token = localStorage.getItem("vetworld_token");
             const isEditing = editingId !== null;
             const url = isEditing
-                ? `http://localhost:8080/api/admin/categories/${editingId}`
-                : "http://localhost:8080/api/admin/categories";
+                ? `/api/admin/categories/${editingId}`
+                : "/api/admin/categories";
             const method = isEditing ? "PUT" : "POST";
 
             const res = await fetch(url, {
