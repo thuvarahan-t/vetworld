@@ -89,6 +89,16 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }: Props) {
 
     const goTo = (v: View) => { reset(); setView(v); };
 
+    const fetchWithTimeout = (input: RequestInfo | URL, init?: RequestInit, timeoutMs = 20000) => {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+        return fetch(input, {
+            ...init,
+            signal: controller.signal,
+        }).finally(() => clearTimeout(timer));
+    };
+
     // Tab toggle buttons (Login / Signup)
     const Tabs = () => (
         <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1.5rem" }}>
@@ -110,7 +120,7 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }: Props) {
     const handleLoginSubmit = async (e: React.FormEvent) => {
         e.preventDefault(); setErrorMsg(""); setIsLoading(true);
         try {
-            const res = await fetch("/api/auth/login", {
+            const res = await fetchWithTimeout("/api/auth/login", {
                 method: "POST", headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ email, password }),
             });
@@ -119,7 +129,9 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }: Props) {
             localStorage.setItem("vetworld_token", data.token);
             onLoginSuccess({ name: data.name, isAdmin: data.role === "ADMIN", email: data.email });
             onClose(); reset();
-        } catch { setErrorMsg("Network error. Make sure the server is running."); }
+        } catch (err: any) {
+            setErrorMsg(err?.name === "AbortError" ? "Request timed out. Please try again." : "Network error. Make sure the server is running.");
+        }
         finally { setIsLoading(false); }
     };
 
@@ -127,7 +139,7 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }: Props) {
     const handleSignupSubmit = async (e: React.FormEvent) => {
         e.preventDefault(); setErrorMsg(""); setIsLoading(true);
         try {
-            const res = await fetch("/api/auth/send-signup-otp", {
+            const res = await fetchWithTimeout("/api/auth/send-signup-otp", {
                 method: "POST", headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ email }),
             });
@@ -135,7 +147,9 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }: Props) {
             if (!res.ok) { setErrorMsg(data.error || "Failed to send OTP."); return; }
             setSuccessMsg("Verification code sent! Check your email inbox.");
             setView("signup-otp");
-        } catch { setErrorMsg("Network error. Make sure the server is running."); }
+        } catch (err: any) {
+            setErrorMsg(err?.name === "AbortError" ? "Request timed out. Please try again." : "Network error. Make sure the server is running.");
+        }
         finally { setIsLoading(false); }
     };
 
@@ -143,7 +157,7 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }: Props) {
     const handleSignupOtpSubmit = async (e: React.FormEvent) => {
         e.preventDefault(); setErrorMsg(""); setIsLoading(true);
         try {
-            const res = await fetch("/api/auth/signup", {
+            const res = await fetchWithTimeout("/api/auth/signup", {
                 method: "POST", headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ name, email, password, phone, address, otp }),
             });
@@ -152,7 +166,9 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }: Props) {
             localStorage.setItem("vetworld_token", data.token);
             onLoginSuccess({ name: data.name, isAdmin: false, email: data.email });
             onClose(); reset();
-        } catch { setErrorMsg("Network error. Make sure the server is running."); }
+        } catch (err: any) {
+            setErrorMsg(err?.name === "AbortError" ? "Request timed out. Please try again." : "Network error. Make sure the server is running.");
+        }
         finally { setIsLoading(false); }
     };
 
@@ -160,14 +176,16 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }: Props) {
     const handleForgotSubmit = async (e: React.FormEvent) => {
         e.preventDefault(); setErrorMsg(""); setIsLoading(true);
         try {
-            const res = await fetch("/api/auth/forgot-password", {
+            const res = await fetchWithTimeout("/api/auth/forgot-password", {
                 method: "POST", headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ email: forgotEmail }),
             });
             const data = await res.json();
             setSuccessMsg("Reset code sent! Check your email inbox.");
             setView("reset");
-        } catch { setErrorMsg("Network error. Please try again."); }
+        } catch (err: any) {
+            setErrorMsg(err?.name === "AbortError" ? "Request timed out. Please try again." : "Network error. Please try again.");
+        }
         finally { setIsLoading(false); }
     };
 
@@ -175,7 +193,7 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }: Props) {
     const handleResetSubmit = async (e: React.FormEvent) => {
         e.preventDefault(); setErrorMsg(""); setIsLoading(true);
         try {
-            const res = await fetch("/api/auth/reset-password", {
+            const res = await fetchWithTimeout("/api/auth/reset-password", {
                 method: "POST", headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ email: forgotEmail, resetCode, newPassword }),
             });
@@ -183,7 +201,9 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }: Props) {
             if (!res.ok) { setErrorMsg(data.error || "Reset failed."); return; }
             setSuccessMsg("Password reset! You can now log in.");
             setTimeout(() => goTo("login"), 1500);
-        } catch { setErrorMsg("Network error. Please try again."); }
+        } catch (err: any) {
+            setErrorMsg(err?.name === "AbortError" ? "Request timed out. Please try again." : "Network error. Please try again.");
+        }
         finally { setIsLoading(false); }
     };
 

@@ -1,10 +1,17 @@
- const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080" ;
+const SERVER_API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+
+function getApiBaseUrl() {
+    // Browser requests should go through Next.js rewrite (/api -> backend)
+    // to avoid direct cross-origin CORS issues.
+    return typeof window === "undefined" ? SERVER_API_BASE_URL : "";
+}
 
 
 /**
  * Generic fetcher utility for all API calls to the Spring Boot backend.
  */
 export async function fetcher<T>(endpoint: string, options?: RequestInit): Promise<T> {
+    const API_BASE_URL = getApiBaseUrl();
     const url = `${API_BASE_URL}/api${endpoint}`;
 
     const res = await fetch(url, {

@@ -5,6 +5,8 @@ import CategoryCard from "@/components/ui/CategoryCard";
 import Link from "next/link";
 import type { Banner, Product, Category } from "@/types";
 
+export const dynamic = "force-dynamic";
+
 async function getData() {
   try {
     const [banners, topSelling, recent, categories] = await Promise.allSettled([
