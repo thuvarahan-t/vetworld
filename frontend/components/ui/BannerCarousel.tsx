@@ -8,8 +8,21 @@ interface Props {
     banners: Banner[];
 }
 
+function normalizeRedirectLink(link?: string): string {
+    if (!link) return "";
+
+    const trimmed = link.trim();
+    if (!trimmed) return "";
+
+    // Keep compatibility with legacy banner links that pointed to /home.
+    if (trimmed === "/home" || trimmed === "home") return "/";
+
+    return trimmed;
+}
+
 export default function BannerCarousel({ banners }: Props) {
     const [current, setCurrent] = useState(0);
+    const currentRedirectLink = normalizeRedirectLink(banners[current]?.redirectLink);
 
     useEffect(() => {
         if (banners.length <= 1) return;
@@ -72,8 +85,8 @@ export default function BannerCarousel({ banners }: Props) {
                     transition={{ duration: 0.45 }}
                     style={{ position: "absolute", inset: 0 }}
                 >
-                    {banners[current].redirectLink ? (
-                        <Link href={banners[current].redirectLink} style={{ display: "block", height: "100%" }}>
+                    {currentRedirectLink ? (
+                        <Link href={currentRedirectLink} style={{ display: "block", height: "100%" }}>
                             <img src={banners[current].imageUrl} alt="Banner" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                         </Link>
                     ) : (
