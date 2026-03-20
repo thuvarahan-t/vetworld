@@ -136,14 +136,14 @@ export default function AdminProductsPage() {
             const token = localStorage.getItem("vetworld_token");
             const payload = {
                 name, description,
-                imageUrl: types[0]?.imageUrl || imageUrl,
+                imageUrl: imageUrl || types[0]?.imageUrl || null,
                 categoryId: categoryId ? parseInt(categoryId) : null,
                 soldOut: isProductSoldOut,
                 types: types.map(t => ({
                     typeName: t.typeName,
                     price: parseFloat(t.price),
-                    imageUrl: t.imageUrl || undefined,
-                    projectKey: t.projectKey || undefined,
+                    imageUrl: t.imageUrl || null,
+                    projectKey: t.projectKey || null,
                     soldOut: !!t.soldOut,
                 }))
             };
@@ -366,6 +366,13 @@ export default function AdminProductsPage() {
                                             <option value="" disabled>Select a category</option>
                                             {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                                         </select>
+                                    </div>
+                                    <div>
+                                        <ImageUpload
+                                            label="Product Image (Optional — shown in product listings)"
+                                            value={imageUrl}
+                                            onUpload={(url: string) => setImageUrl(url)}
+                                        />
                                     </div>
                                     <div>
                                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.6rem" }}>
