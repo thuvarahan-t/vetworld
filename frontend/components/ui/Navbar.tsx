@@ -135,6 +135,33 @@ export default function Navbar() {
                             Hi {user.name}!
                         </span>
 
+                        <Link
+                            href="/orders"
+                            style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "0.4rem",
+                                background: "var(--bg)",
+                                color: "var(--text-primary)",
+                                fontWeight: 600,
+                                fontSize: "0.9rem",
+                                padding: "0.5rem 1rem",
+                                borderRadius: "var(--radius-sm)",
+                                border: "1.5px solid var(--border)",
+                                transition: "all var(--transition)",
+                            }}
+                            onMouseEnter={(e) => {
+                                e.currentTarget.style.borderColor = "var(--vet-blue)";
+                                e.currentTarget.style.color = "var(--vet-blue)";
+                            }}
+                            onMouseLeave={(e) => {
+                                e.currentTarget.style.borderColor = "var(--border)";
+                                e.currentTarget.style.color = "var(--text-primary)";
+                            }}
+                        >
+                            📦 My Orders
+                        </Link>
+
                         {/* Logout Button */}
                         <button
                             onClick={() => setShowLogoutConfirm(true)}

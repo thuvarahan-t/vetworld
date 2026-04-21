@@ -1,6 +1,8 @@
 package com.vetworld.VetWorld.controller;
 
 import com.vetworld.VetWorld.dto.*;
+import com.vetworld.VetWorld.model.Order;
+import com.vetworld.VetWorld.model.OrderStatus;
 import com.vetworld.VetWorld.model.Role;
 import com.vetworld.VetWorld.model.User;
 import com.vetworld.VetWorld.repository.*;
@@ -9,6 +11,8 @@ import com.vetworld.VetWorld.service.*;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -28,6 +32,9 @@ public class AdminController {
     private final CategoryRepository categoryRepository;
     private final BannerRepository bannerRepository;
     private final UserRepository userRepository;
+    private final OrderService orderService;
+    private final OrderRepository orderRepository;
+    private final ReceiptPdfService receiptPdfService;
 
     @Value("${app.admin.username:admin}")
     private String adminUsername;
@@ -56,6 +63,9 @@ public class AdminController {
         stats.setTotalBanners(bannerRepository.count());
         stats.setTotalUsers(userRepository.count());
         stats.setTopSellingCount(productRepository.findByTopSellingTrue().size());
+        stats.setTotalOrders(orderRepository.count());
+        stats.setPendingOrders(orderRepository.countByStatusIn(
+                List.of(OrderStatus.CONFIRMED, OrderStatus.PROCESSING, OrderStatus.PACKED)));
         return ResponseEntity.ok(stats);
     }
 
@@ -161,4 +171,47 @@ public class AdminController {
         userRepository.deleteById(id);
         return ResponseEntity.noContent().build();
     }
+
+    // ── Orders ────────────────────────────────────────────────
+
+    @GetMapping("/orders")
+    public ResponseEntity<List<OrderDto>> getAllOrders() {
+        return ResponseEntity.ok(orderService.getAllOrders());
+    }
+
+    @GetMapping("/orders/{id}")
+    public ResponseEntity<OrderDto> getOrder(@PathVariable Long id) {
+        return ResponseEntity.ok(orderService.getOrderById(id));
+    }
+
+    @PutMapping("/orders/{id}")
+    public ResponseEntity<OrderDto> updateOrder(
+            @PathVariable Long id,
+            @RequestBody AdminOrderUpdateRequest request) {
+        return ResponseEntity.ok(orderService.updateOrder(id, request));
+    }
+
+    @PutMapping("/orders/{id}/cancel")
+    public ResponseEntity<OrderDto> cancelOrder(
+            @PathVariable Long id,
+            @RequestBody Map<String, String> body) {
+        String reason = body.getOrDefault("reason", "Order cancelled by admin.");
+        return ResponseEntity.ok(orderService.cancelOrder(id, reason));
+    }
+
+    @GetMapping("/orders/{id}/receipt")
+    public ResponseEntity<byte[]> downloadAdminReceipt(@PathVariable Long id) {
+        try {
+            Order order = orderService.getRawOrder(id);
+            byte[] pdfBytes = receiptPdfService.generateReceipt(order);
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_PDF);
+            headers.setContentDispositionFormData("attachment",
+                    "VetWorld-Receipt-" + order.getOrderNumber() + ".pdf");
+            return ResponseEntity.ok().headers(headers).body(pdfBytes);
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
+        }
+    }
 }
+
