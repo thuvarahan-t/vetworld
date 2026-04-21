@@ -53,9 +53,9 @@ export async function authFetcher<T>(endpoint: string, options?: RequestInit): P
     });
 }
 
-// ─── Typed API helpers ──────────────────────────────────────
+// ─── Typed API helpers ──────────────────────────────────────────
 
-import type { Category, Product, Banner, AdminStats } from "@/types";
+import type { Category, Product, Banner, AdminStats, Order, PlaceOrderPayload, PayHereInitResponse } from "@/types";
 
 // Public
 export const api = {
@@ -65,6 +65,30 @@ export const api = {
     getProducts: (params?: string) => fetcher<Product[]>(`/products${params ? `?${params}` : ""}`),
     getProduct: (id: number) => fetcher<Product>(`/products/${id}`),
     getBanners: () => fetcher<Banner[]>("/banners"),
+};
+
+// User — order & payment APIs (require JWT)
+export const userApi = {
+    placeOrder: (data: PlaceOrderPayload) =>
+        authFetcher<PayHereInitResponse>("/orders", { method: "POST", body: JSON.stringify(data) }),
+
+    getMyOrders: () => authFetcher<Order[]>("/orders/my"),
+
+    downloadReceipt: async (orderId: number): Promise<void> => {
+        const token = typeof window !== "undefined" ? localStorage.getItem("vetworld_token") : null;
+        const API_BASE_URL = getApiBaseUrl();
+        const res = await fetch(`${API_BASE_URL}/api/orders/${orderId}/receipt`, {
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+        if (!res.ok) throw new Error("Failed to download receipt");
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `VetWorld-Receipt-${orderId}.pdf`;
+        a.click();
+        URL.revokeObjectURL(url);
+    },
 };
 
 // Admin
@@ -117,4 +141,27 @@ export const adminApi = {
         authFetcher<Banner>("/admin/banners", { method: "POST", body: JSON.stringify(data) }),
     deleteBanner: (id: number) =>
         authFetcher<void>(`/admin/banners/${id}`, { method: "DELETE" }),
+
+    // Orders
+    getOrders: () => authFetcher<Order[]>("/admin/orders"),
+    getOrder: (id: number) => authFetcher<Order>(`/admin/orders/${id}`),
+    updateOrder: (id: number, data: { status?: string; deliveryDate?: string; }) =>
+        authFetcher<Order>(`/admin/orders/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+    cancelOrder: (id: number, reason: string) =>
+        authFetcher<Order>(`/admin/orders/${id}/cancel`, { method: "PUT", body: JSON.stringify({ reason }) }),
+    downloadAdminReceipt: async (orderId: number, orderNumber: string): Promise<void> => {
+        const token = typeof window !== "undefined" ? localStorage.getItem("vetworld_token") : null;
+        const API_BASE_URL = getApiBaseUrl();
+        const res = await fetch(`${API_BASE_URL}/api/admin/orders/${orderId}/receipt`, {
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+        if (!res.ok) throw new Error("Failed to download receipt");
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `VetWorld-Receipt-${orderNumber}.pdf`;
+        a.click();
+        URL.revokeObjectURL(url);
+    },
 };

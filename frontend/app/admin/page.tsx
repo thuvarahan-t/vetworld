@@ -34,9 +34,10 @@ export default function AdminDashboardPage() {
 
     const statCards = stats ? [
         { title: "Total Users", value: stats.totalUsers, icon: "👥", color: "#3B82F6" },
+        { title: "Total Orders", value: stats.totalOrders, icon: "📦", color: "#6366F1" },
+        { title: "Pending Orders", value: stats.pendingOrders, icon: "⏳", color: "#F59E0B" },
         { title: "Total Products", value: stats.totalProducts, icon: "🦴", color: "#10B981" },
         { title: "Total Categories", value: stats.totalCategories, icon: "📁", color: "#F59E0B" },
-        { title: "Total Banners", value: stats.totalBanners, icon: "🖼️", color: "#8B5CF6" },
         { title: "Top Selling Items", value: stats.topSellingCount, icon: "🔥", color: "#EF4444" },
     ] : [];
 

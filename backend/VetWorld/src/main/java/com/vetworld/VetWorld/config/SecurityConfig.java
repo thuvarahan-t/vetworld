@@ -63,8 +63,12 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/categories/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/products/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/banners").permitAll()
+                        // PayHere webhook — public, secured by MD5 signature
+                        .requestMatchers(HttpMethod.POST, "/api/payments/notify").permitAll()
                         // Admin only CRUD
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                        // User order endpoints — authenticated users
+                        .requestMatchers("/api/orders/**").authenticated()
                         .anyRequest().authenticated())
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
 

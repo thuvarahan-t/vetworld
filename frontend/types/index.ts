@@ -48,6 +48,68 @@ export interface CartItem {
     quantity: number;
 }
 
+// ─── Order Types ───────────────────────────────────────────
+
+export type OrderStatus =
+    | 'PENDING_PAYMENT'
+    | 'CONFIRMED'
+    | 'PROCESSING'
+    | 'PACKED'
+    | 'DELIVERED'
+    | 'CANCELLED';
+
+export interface OrderItem {
+    id: number;
+    productId: number;
+    typeId: number;
+    productName: string;
+    typeName: string;
+    unitPrice: number;
+    quantity: number;
+    lineTotal: number;
+}
+
+export interface Order {
+    id: number;
+    orderNumber: string;
+    userId: number;
+    userEmail: string;
+    customerName: string;
+    customerPhone: string;
+    deliveryAddress: string;
+    status: OrderStatus;
+    totalAmount: number;
+    payherePaymentId?: string;
+    deliveryDate?: string;
+    cancellationReason?: string;
+    items: OrderItem[];
+    createdAt: string;
+    updatedAt: string;
+}
+
+export interface PlaceOrderPayload {
+    customerName: string;
+    customerPhone: string;
+    deliveryAddress: string;
+    items: {
+        productId: number;
+        typeId: number;
+        productName: string;
+        typeName: string;
+        unitPrice: number;
+        quantity: number;
+    }[];
+}
+
+export interface PayHereInitResponse {
+    orderId: number;
+    orderNumber: string;
+    totalAmount: string;
+    currency: string;
+    merchantId: string;
+    hash: string;
+}
+
 // ─── API Response Types ────────────────────────────────────
 
 export interface ApiError {
@@ -63,4 +125,6 @@ export interface AdminStats {
     totalBanners: number;
     topSellingCount: number;
     totalUsers: number;
+    totalOrders: number;
+    pendingOrders: number;
 }

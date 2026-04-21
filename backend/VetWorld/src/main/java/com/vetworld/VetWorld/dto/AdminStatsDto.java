@@ -9,4 +9,6 @@ public class AdminStatsDto {
     private long totalBanners;
     private long totalUsers;
     private long topSellingCount;
+    private long totalOrders;
+    private long pendingOrders;
 }

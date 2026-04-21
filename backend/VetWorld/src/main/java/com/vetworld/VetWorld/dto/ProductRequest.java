@@ -17,7 +17,6 @@ public class ProductRequest {
     @NotBlank(message = "Product description is required")
     private String description;
 
-    @NotBlank(message = "Product imageUrl is required")
     @Size(max = 1000, message = "Image URL must be at most 1000 characters")
     private String imageUrl;
 

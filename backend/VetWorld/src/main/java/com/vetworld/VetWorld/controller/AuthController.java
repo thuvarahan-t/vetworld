@@ -10,12 +10,11 @@ import com.vetworld.VetWorld.model.Role;
 import com.vetworld.VetWorld.model.User;
 import com.vetworld.VetWorld.repository.UserRepository;
 import com.vetworld.VetWorld.security.JwtUtil;
+import com.vetworld.VetWorld.service.EmailService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.mail.SimpleMailMessage;
-import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.AuthenticationException;
@@ -37,7 +36,7 @@ public class AuthController {
         private final UserRepository userRepository;
         private final PasswordEncoder passwordEncoder;
         private final JwtUtil jwtUtil;
-        private final JavaMailSender mailSender;
+        private final EmailService emailService;
         private final OtpService otpService;
 
         @Value("${app.mail.from:noreply@vetworld.com}")
@@ -56,22 +55,15 @@ public class AuthController {
 
                 String code = otpService.generateOtp(request.getEmail());
 
-                try {
-                        SimpleMailMessage message = new SimpleMailMessage();
-                        message.setFrom(fromEmail);
-                        message.setTo(request.getEmail());
-                        message.setSubject("VetWorld - Verify your email");
-                        message.setText(
-                                        "Hello,\n\n" +
-                                                        "Thank you for registering at VetWorld.\n\n" +
-                                                        "Your verification code is: " + code + "\n\n" +
-                                                        "This code is valid for 15 minutes. Do not share it with anyone.\n\n"
-                                                        +
-                                                        "Regards,\nVetWorld Team");
-                        mailSender.send(message);
-                        System.out.println("✅ Signup OTP email sent to " + request.getEmail());
-                } catch (Exception e) {
-                        System.err.println("❌ Email error: " + e.getMessage());
+                String subject = "VetWorld - Verify your email";
+                String body = "Hello,\n\n" +
+                        "Thank you for registering at VetWorld.\n\n" +
+                        "Your verification code is: " + code + "\n\n" +
+                        "This code is valid for 15 minutes. Do not share it with anyone.\n\n" +
+                        "Regards,\nVetWorld Team";
+
+                boolean sent = emailService.sendEmail(request.getEmail(), subject, body);
+                if (!sent) {
                         System.out.println("🔑 Fallback Signup OTP for " + request.getEmail() + ": " + code);
                         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                                         .body(Map.of("error",
@@ -205,28 +197,18 @@ public class AuthController {
                 user.setResetTokenExpiry(LocalDateTime.now().plusMinutes(15));
                 userRepository.save(user);
 
-                // Send the OTP via email
-                boolean emailSent = false;
-                try {
-                        SimpleMailMessage message = new SimpleMailMessage();
-                        message.setFrom(fromEmail);
-                        message.setTo(user.getEmail());
-                        message.setSubject("VetWorld - Password Reset Code");
-                        message.setText(
-                                        "Hello " + user.getName() + ",\n\n" +
-                                                        "You requested a password reset for your VetWorld account.\n\n"
-                                                        +
-                                                        "Your reset code is: " + code + "\n\n" +
-                                                        "This code is valid for 15 minutes. Do not share it with anyone.\n\n"
-                                                        +
-                                                        "If you did not request this, please ignore this email.\n\n" +
-                                                        "Regards,\nVetWorld Team");
-                        mailSender.send(message);
-                        emailSent = true;
-                        System.out.println("✅ Reset email sent to " + user.getEmail());
-                } catch (Exception e) {
-                        System.err.println("❌ Email error: " + e.getMessage());
-                        System.out.println("🔑 Fallback OTP for " + user.getEmail() + ": " + code);
+                // Send the OTP via Resend
+                String subject = "VetWorld - Password Reset Code";
+                String body = "Hello " + user.getName() + ",\n\n" +
+                        "You requested a password reset for your VetWorld account.\n\n" +
+                        "Your reset code is: " + code + "\n\n" +
+                        "This code is valid for 15 minutes. Do not share it with anyone.\n\n" +
+                        "If you did not request this, please ignore this email.\n\n" +
+                        "Regards,\nVetWorld Team";
+
+                boolean emailSent = emailService.sendEmail(user.getEmail(), subject, body);
+                if (!emailSent) {
+                        System.out.println("🔑 Fallback Reset OTP for " + user.getEmail() + ": " + code);
                 }
 
                 // Clean response — no debug fields
