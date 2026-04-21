@@ -5,8 +5,8 @@ import { useRouter } from "next/navigation";
 import { useCartStore } from "@/store/cartStore";
 import { userApi } from "@/lib/api";
 import Link from "next/link";
+import Script from "next/script";
 import { motion, AnimatePresence } from "framer-motion";
-import payhere from "payhere-embed-sdk";
 
 export default function CheckoutPage() {
     const router = useRouter();
@@ -94,7 +94,7 @@ export default function CheckoutPage() {
                 return_url: `${window.location.origin}/orders`,
                 cancel_url: `${window.location.origin}/checkout`,
                 notify_url: `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'}/api/payments/notify`,
-                order_id: payhereInit.orderId.toString(),
+                order_id: payhereInit.orderNumber,
                 items: "VetWorld Order " + payhereInit.orderNumber,
                 amount: payhereInit.totalAmount,
                 currency: payhereInit.currency,
@@ -108,28 +108,30 @@ export default function CheckoutPage() {
                 country: "Sri Lanka",
             };
 
-            payhere.onCompleted = function onCompleted(orderId) {
-                // Payment success
+            // window.payhere is injected by the PayHere LK JS SDK script below
+            window.payhere.onCompleted = function onCompleted(orderId) {
+                // Payment success — orderId is the PayHere transaction reference
+                console.log("PayHere payment completed:", orderId);
                 setPlacedOrderId(payhereInit.orderId);
                 setPlacedOrderNumber(payhereInit.orderNumber);
                 clearCart();
                 setStep(3);
             };
 
-            payhere.onDismissed = function onDismissed() {
-                // Payment modal dismissed
+            window.payhere.onDismissed = function onDismissed() {
+                // User closed the PayHere popup without paying
                 setIsLoading(false);
                 setError("Payment was cancelled. You can try again.");
             };
 
-            payhere.onError = function onError(errorMsg) {
-                // Payment error
+            window.payhere.onError = function onError(errorMsg) {
+                // PayHere reported an error inside the widget
                 setIsLoading(false);
                 setError("Payment error: " + errorMsg);
             };
 
-            // Start PayHere flow
-            payhere.startPayment(payhereConfig);
+            // Open the PayHere checkout popup
+            window.payhere.startPayment(payhereConfig);
 
         } catch (err: any) {
             setError(err.message || "Failed to initiate payment. Please try again.");
@@ -297,7 +299,16 @@ export default function CheckoutPage() {
                 )}
             </AnimatePresence>
             
-            {/* PayHere global styles require this div to exist in dom, SDK creates it */}
+            {/*
+             * PayHere LK JS SDK — loaded once per page.
+             * Injects window.payhere with startPayment / onCompleted /
+             * onDismissed / onError. Types are in types/payhere.d.ts.
+             * Use sandbox="https://sandbox.payhere.lk/lib/payhere.js" for testing.
+             */}
+            <Script
+                src="https://www.payhere.lk/lib/payhere.js"
+                strategy="lazyOnload"
+            />
         </main>
     );
 }
