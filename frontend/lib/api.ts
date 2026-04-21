@@ -15,11 +15,12 @@ export async function fetcher<T>(endpoint: string, options?: RequestInit): Promi
     const url = `${API_BASE_URL}/api${endpoint}`;
 
     const res = await fetch(url, {
+        ...options,
         headers: {
+            // Default Content-Type – callers can override via options.headers
             "Content-Type": "application/json",
             ...options?.headers,
         },
-        ...options,
     });
 
     if (!res.ok) {

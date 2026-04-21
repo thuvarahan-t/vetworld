@@ -3,14 +3,7 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { adminApi } from "@/lib/api";
-
-interface AdminStats {
-    totalProducts: number;
-    totalCategories: number;
-    totalBanners: number;
-    totalUsers: number;
-    topSellingCount: number;
-}
+import type { AdminStats } from "@/types";
 
 export default function AdminDashboardPage() {
     const [stats, setStats] = useState<AdminStats | null>(null);

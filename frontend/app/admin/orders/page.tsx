@@ -197,7 +197,7 @@ export default function AdminOrdersPage() {
                                                 disabled={selectedOrder.status === 'CANCELLED' || selectedOrder.status === 'PENDING_PAYMENT'}
                                                 onClick={() => handleUpdateStatus(selectedOrder.id, s)}
                                                 style={{
-                                                    padding: "0.5rem 1rem", borderRadius: "100px", fontSize: "0.8rem", fontWeight: 600, border: "none", cursor: "pointer",
+                                                    padding: "0.5rem 1rem", borderRadius: "100px", fontSize: "0.8rem", fontWeight: 600, cursor: "pointer",
                                                     background: selectedOrder.status === s ? "var(--vet-green)" : "var(--surface)",
                                                     color: selectedOrder.status === s ? "white" : "var(--text-primary)",
                                                     border: selectedOrder.status === s ? "none" : "1px solid var(--border)",
