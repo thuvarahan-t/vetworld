@@ -12,7 +12,6 @@ import com.vetworld.VetWorld.repository.UserRepository;
 import com.vetworld.VetWorld.security.JwtUtil;
 import com.vetworld.VetWorld.service.EmailService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -38,9 +37,6 @@ public class AuthController {
         private final JwtUtil jwtUtil;
         private final EmailService emailService;
         private final OtpService otpService;
-
-        @Value("${app.mail.from:noreply@vetworld.com}")
-        private String fromEmail;
 
         /**
          * POST /api/auth/send-signup-otp

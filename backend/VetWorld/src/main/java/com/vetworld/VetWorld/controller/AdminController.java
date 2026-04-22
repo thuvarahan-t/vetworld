@@ -36,10 +36,10 @@ public class AdminController {
     private final OrderRepository orderRepository;
     private final ReceiptPdfService receiptPdfService;
 
-    @Value("${app.admin.username:admin}")
+    @Value("${APP_ADMIN_USERNAME}")
     private String adminUsername;
 
-    @Value("${app.admin.password:vetworld2024}")
+    @Value("${APP_ADMIN_PASSWORD}")
     private String adminPassword;
 
     // ── Auth ──────────────────────────────────────────────────
