@@ -4,6 +4,7 @@ import com.vetworld.VetWorld.model.Role;
 import com.vetworld.VetWorld.model.User;
 import com.vetworld.VetWorld.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -17,6 +18,15 @@ public class DataSeeder {
         private final UserRepository userRepository;
         private final PasswordEncoder passwordEncoder;
         private final JdbcTemplate jdbcTemplate;
+
+        @Value("${APP_ADMIN_EMAIL}")
+        private String adminEmail;
+
+        @Value("${APP_ADMIN_NAME:Admin}")
+        private String adminName;
+
+        @Value("${APP_ADMIN_PASSWORD}")
+        private String adminPassword;
 
         @Bean
         public CommandLineRunner loadData() {
@@ -65,11 +75,11 @@ public class DataSeeder {
                         }
 
                         // ---- Seed Admin User only ----
-                        if (!userRepository.existsByEmail("adminvetworld@gmail.com")) {
+                        if (!userRepository.existsByEmail(adminEmail)) {
                                 User admin = User.builder()
-                                                .name("Admin")
-                                                .email("adminvetworld@gmail.com")
-                                                .password(passwordEncoder.encode("admin@123"))
+                                                .name(adminName)
+                                                .email(adminEmail)
+                                                .password(passwordEncoder.encode(adminPassword))
                                                 .role(Role.ADMIN)
                                                 .build();
                                 userRepository.save(admin);

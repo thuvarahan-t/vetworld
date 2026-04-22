@@ -11,7 +11,7 @@ import java.util.Date;
 @Component
 public class JwtUtil {
 
-    @Value("${app.jwt.secret:vetworld-super-secret-key-for-jwt-do-not-share-2024}")
+    @Value("${app.jwt.secret}")
     private String secret;
 
     @Value("${app.jwt.expiration:86400000}") // 24 hours
