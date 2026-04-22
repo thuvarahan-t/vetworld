@@ -174,14 +174,26 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }: Props) {
 
     // ── Forgot Password ───────────────────────────────────────────────
     const handleForgotSubmit = async (e: React.FormEvent) => {
-        e.preventDefault(); setErrorMsg(""); setIsLoading(true);
+        e.preventDefault(); setErrorMsg(""); setSuccessMsg(""); setIsLoading(true);
         try {
             const res = await fetchWithTimeout("/api/auth/forgot-password", {
                 method: "POST", headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ email: forgotEmail }),
             });
             const data = await res.json();
-            setSuccessMsg("Reset code sent! Check your email inbox.");
+
+            if (!res.ok) {
+                setErrorMsg(data?.error || data?.message || "Failed to send reset code.");
+                return;
+            }
+
+            const message = data?.message || "If this email is registered, a reset code has been sent.";
+            if (message.toLowerCase().includes("could not send email")) {
+                setErrorMsg(message);
+                return;
+            }
+
+            setSuccessMsg(message);
             setView("reset");
         } catch (err: any) {
             setErrorMsg(err?.name === "AbortError" ? "Request timed out. Please try again." : "Network error. Please try again.");

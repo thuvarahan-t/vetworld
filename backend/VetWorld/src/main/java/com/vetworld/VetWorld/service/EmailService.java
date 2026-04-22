@@ -19,7 +19,7 @@ public class EmailService {
     @Value("${resend.api.key:}")
     private String resendApiKey;
 
-    @Value("${app.mail.from:noreply@vetworld.com}")
+    @Value("${app.mail.from:otp@vetworld.thuvarahan.me}")
     private String fromEmail;
 
     private final HttpClient httpClient = HttpClient.newHttpClient();
