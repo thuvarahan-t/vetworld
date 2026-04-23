@@ -1,4 +1,9 @@
-const SERVER_API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+const SERVER_API_BASE_URL =
+    process.env.BACKEND_API_URL ||
+    process.env.NEXT_PUBLIC_API_URL ||
+    "http://localhost:8080";
+
+const DEFAULT_FETCH_TIMEOUT_MS = Number(process.env.API_TIMEOUT_MS || 10000);
 
 function getApiBaseUrl() {
     // Browser requests should go through Next.js rewrite (/api -> backend)
@@ -14,14 +19,49 @@ export async function fetcher<T>(endpoint: string, options?: RequestInit): Promi
     const API_BASE_URL = getApiBaseUrl();
     const url = `${API_BASE_URL}/api${endpoint}`;
 
-    const res = await fetch(url, {
-        ...options,
-        headers: {
-            // Default Content-Type – callers can override via options.headers
-            "Content-Type": "application/json",
-            ...options?.headers,
-        },
-    });
+    const timeoutController = new AbortController();
+    const timeoutMs = DEFAULT_FETCH_TIMEOUT_MS > 0 ? DEFAULT_FETCH_TIMEOUT_MS : 10000;
+
+    const timeoutId = setTimeout(() => {
+        timeoutController.abort();
+    }, timeoutMs);
+
+    let removeAbortListener: (() => void) | undefined;
+
+    if (options?.signal) {
+        const forwardAbort = () => timeoutController.abort();
+        if (options.signal.aborted) {
+            timeoutController.abort();
+        } else {
+            options.signal.addEventListener("abort", forwardAbort, { once: true });
+            removeAbortListener = () => options.signal?.removeEventListener("abort", forwardAbort);
+        }
+    }
+
+    const { signal: _ignoredSignal, ...requestOptions } = options || {};
+
+    let res: Response;
+
+    try {
+        res = await fetch(url, {
+            ...requestOptions,
+            signal: timeoutController.signal,
+            headers: {
+                // Default Content-Type – callers can override via options.headers
+                "Content-Type": "application/json",
+                ...requestOptions.headers,
+            },
+        });
+    } catch (error) {
+        if (error instanceof Error && error.name === "AbortError") {
+            throw new Error(`Request timed out after ${timeoutMs}ms for ${endpoint}`);
+        }
+
+        throw error;
+    } finally {
+        clearTimeout(timeoutId);
+        removeAbortListener?.();
+    }
 
     if (!res.ok) {
         const error = await res.text();
