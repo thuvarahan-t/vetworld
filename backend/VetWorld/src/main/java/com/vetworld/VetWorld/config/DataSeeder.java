@@ -67,12 +67,6 @@ public class DataSeeder {
                         jdbcTemplate.update(
                                 "DELETE FROM banners WHERE image_url LIKE '%unsplash%'"
                         );
-                        int deletedUsers = jdbcTemplate.update(
-                                "DELETE FROM users WHERE role = 'USER'"
-                        );
-                        if (deletedUsers > 0) {
-                                System.out.println("🗑️  Removed " + deletedUsers + " sample user(s).");
-                        }
 
                         // ---- Seed Admin User only ----
                         if (!userRepository.existsByEmail(adminEmail)) {
