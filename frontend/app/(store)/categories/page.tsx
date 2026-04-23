@@ -2,6 +2,8 @@ import { api } from "@/lib/api";
 import CategoryCard from "@/components/ui/CategoryCard";
 import type { Category } from "@/types";
 
+export const dynamic = "force-dynamic";
+
 export default async function CategoriesPage() {
     let categories: Category[] = [];
     try {

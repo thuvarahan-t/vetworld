@@ -5,11 +5,17 @@ import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import jakarta.annotation.PostConstruct;
 import javax.crypto.SecretKey;
+import java.nio.charset.StandardCharsets;
 import java.util.Date;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Component
 public class JwtUtil {
+
+    private static final Logger log = LoggerFactory.getLogger(JwtUtil.class);
 
     @Value("${app.jwt.secret}")
     private String secret;
@@ -17,8 +23,21 @@ public class JwtUtil {
     @Value("${app.jwt.expiration:86400000}") // 24 hours
     private long expiration;
 
+    private SecretKey key;
+
+    @PostConstruct
+    void init() {
+        if (secret == null || secret.isBlank()) {
+            log.warn("JWT secret is not configured. Using a generated in-memory key, so existing tokens will not survive restarts.");
+            key = Keys.secretKeyFor(SignatureAlgorithm.HS256);
+            return;
+        }
+
+        key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
+    }
+
     private SecretKey getKey() {
-        return Keys.hmacShaKeyFor(secret.getBytes());
+        return key;
     }
 
     public String generateToken(String username) {
