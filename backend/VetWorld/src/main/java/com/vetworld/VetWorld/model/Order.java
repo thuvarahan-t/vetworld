@@ -60,6 +60,22 @@ public class Order {
     @Column(name = "cancellation_reason", columnDefinition = "TEXT")
     private String cancellationReason;
 
+    // Cloudinary URL of user-uploaded bank transfer slip
+    @Column(name = "payment_slip_url", columnDefinition = "TEXT")
+    private String paymentSlipUrl;
+
+    // Reason set by admin if slip is rejected (user can re-upload)
+    @Column(name = "slip_rejection_reason", columnDefinition = "TEXT")
+    private String slipRejectionReason;
+
+    // Bank details provided by user for refunds after cancellation
+    @Column(name = "bank_details", columnDefinition = "TEXT")
+    private String bankDetails;
+
+    // Cloudinary URL of refund receipt uploaded by admin
+    @Column(name = "refund_receipt_url", columnDefinition = "TEXT")
+    private String refundReceiptUrl;
+
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
     @Builder.Default
     private List<OrderItem> items = new ArrayList<>();

@@ -65,7 +65,7 @@ public class AdminController {
         stats.setTopSellingCount(productRepository.findByTopSellingTrue().size());
         stats.setTotalOrders(orderRepository.count());
         stats.setPendingOrders(orderRepository.countByStatusIn(
-                List.of(OrderStatus.CONFIRMED, OrderStatus.PROCESSING, OrderStatus.PACKED)));
+                List.of(OrderStatus.PAYMENT_REVIEW, OrderStatus.CONFIRMED, OrderStatus.PROCESSING, OrderStatus.PACKED)));
         return ResponseEntity.ok(stats);
     }
 
@@ -199,6 +199,27 @@ public class AdminController {
         return ResponseEntity.ok(orderService.cancelOrder(id, reason));
     }
 
+    @PutMapping("/orders/{id}/approve-slip")
+    public ResponseEntity<OrderDto> approveSlip(@PathVariable Long id) {
+        return ResponseEntity.ok(orderService.approvePaymentSlip(id));
+    }
+
+    @PutMapping("/orders/{id}/reject-slip")
+    public ResponseEntity<OrderDto> rejectSlip(
+            @PathVariable Long id,
+            @RequestBody Map<String, String> body) {
+        String reason = body.getOrDefault("reason", "Payment slip could not be verified.");
+        return ResponseEntity.ok(orderService.rejectPaymentSlip(id, reason));
+    }
+
+    @PutMapping("/orders/{id}/refund")
+    public ResponseEntity<OrderDto> processRefund(
+            @PathVariable Long id,
+            @RequestBody Map<String, String> body) {
+        String refundReceiptUrl = body.get("refundReceiptUrl");
+        return ResponseEntity.ok(orderService.processRefund(id, refundReceiptUrl));
+    }
+
     @GetMapping("/orders/{id}/receipt")
     public ResponseEntity<byte[]> downloadAdminReceipt(@PathVariable Long id) {
         try {
@@ -215,3 +236,4 @@ public class AdminController {
     }
 }
 
+  

@@ -26,6 +26,10 @@ public class OrderDto {
     private String payherePaymentId;
     private LocalDate deliveryDate;
     private String cancellationReason;
+    private String paymentSlipUrl;
+    private String slipRejectionReason;
+    private String bankDetails;
+    private String refundReceiptUrl;
     private List<OrderItemDto> items;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
@@ -44,6 +48,10 @@ public class OrderDto {
                 .payherePaymentId(order.getPayherePaymentId())
                 .deliveryDate(order.getDeliveryDate())
                 .cancellationReason(order.getCancellationReason())
+                .paymentSlipUrl(order.getPaymentSlipUrl())
+                .slipRejectionReason(order.getSlipRejectionReason())
+                .bankDetails(order.getBankDetails())
+                .refundReceiptUrl(order.getRefundReceiptUrl())
                 .items(order.getItems().stream()
                         .map(OrderItemDto::fromEntity)
                         .collect(Collectors.toList()))

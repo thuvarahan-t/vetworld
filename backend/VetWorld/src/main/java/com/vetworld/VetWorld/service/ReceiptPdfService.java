@@ -72,15 +72,19 @@ public class ReceiptPdfService {
             case PROCESSING, PACKED -> VET_BLUE;
             case DELIVERED -> GREEN;
             case CANCELLED -> RED;
+            case REFUNDED -> GREEN;
+            case PAYMENT_REVIEW -> VET_BLUE;
             default -> GREY_TEXT;
         };
         String statusLabel = switch (order.getStatus()) {
             case PENDING_PAYMENT -> "PAYMENT PENDING";
+            case PAYMENT_REVIEW -> "⏳ AWAITING PAYMENT REVIEW";
             case CONFIRMED -> "✓ ORDER CONFIRMED";
             case PROCESSING -> "⚙ PROCESSING";
             case PACKED -> "📦 PACKED";
             case DELIVERED -> "✓ DELIVERED";
             case CANCELLED -> "✕ CANCELLED";
+            case REFUNDED -> "✓ REFUNDED";
         };
         document.add(new Paragraph(statusLabel)
                 .setFont(boldFont).setFontSize(11).setFontColor(statusColor)

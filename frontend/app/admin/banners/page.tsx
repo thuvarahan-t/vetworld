@@ -1,82 +1,79 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import ImageUpload from "@/components/ui/ImageUpload";
+import { useAdminBanners, revalidateBanners } from "@/lib/adminHooks";
+import { authFetcher } from "@/lib/api";
 
-interface Banner {
-    id: number;
-    imageUrl: string;
-    redirectLink?: string;
+interface Banner { id: number; imageUrl: string; redirectLink?: string; }
+
+function BannerSkeleton() {
+    return (
+        <div style={{ background: "var(--surface)", borderRadius: "var(--radius-lg)", border: "1px solid var(--border)", overflow: "hidden" }}>
+            <div style={{ width: "100%", height: "200px", background: "var(--border)", animation: "pulse 1.5s ease-in-out infinite" }} />
+            <div style={{ padding: "1rem 1.5rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div style={{ width: "100px", height: "16px", borderRadius: "6px", background: "var(--border)" }} />
+                <div style={{ display: "flex", gap: "0.5rem" }}>
+                    <div style={{ width: "60px", height: "32px", borderRadius: "var(--radius-sm)", background: "var(--border)" }} />
+                    <div style={{ width: "60px", height: "32px", borderRadius: "var(--radius-sm)", background: "var(--border)" }} />
+                </div>
+            </div>
+        </div>
+    );
 }
 
 export default function AdminBannersPage() {
-    const [banners, setBanners] = useState<Banner[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
+    const { data: banners = [], error, isLoading, mutate } = useAdminBanners();
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [error, setError] = useState("");
     const [showForm, setShowForm] = useState(false);
     const [editingId, setEditingId] = useState<number | null>(null);
-
-    // Form state
     const [imageUrl, setImageUrl] = useState("");
     const [redirectLink, setRedirectLink] = useState("");
 
-    const fetchBanners = async () => {
-        setIsLoading(true);
-        try {
-            const res = await fetch("/api/banners");
-            if (!res.ok) throw new Error("Failed to fetch banners");
-            const data = await res.json();
-            setBanners(data);
-        } catch (err: any) {
-            setError(err.message);
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    useEffect(() => { fetchBanners(); }, []);
+    const closeForm = useCallback(() => {
+        setShowForm(false);
+        setEditingId(null);
+        setImageUrl("");
+        setRedirectLink("");
+    }, []);
 
     const handleDelete = async (id: number) => {
         if (!confirm("Are you sure you want to remove this banner?")) return;
+        mutate(prev => (prev || []).filter(b => b.id !== id), { revalidate: false });
         try {
-            const token = localStorage.getItem("vetworld_token");
-            const res = await fetch(`/api/admin/banners/${id}`, {
-                method: "DELETE", headers: { "Authorization": `Bearer ${token}` }
-            });
-            if (!res.ok) throw new Error("Failed to delete banner");
-            setBanners(prev => prev.filter(b => b.id !== id));
-        } catch (err: any) { alert(err.message); }
+            await authFetcher(`/admin/banners/${id}`, { method: "DELETE" });
+            revalidateBanners();
+        } catch (err: any) {
+            alert(err.message);
+            revalidateBanners();
+        }
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsSubmitting(true);
         try {
-            const token = localStorage.getItem("vetworld_token");
             const isEditing = editingId !== null;
-            const url = isEditing
-                ? `/api/admin/banners/${editingId}`
-                : "/api/admin/banners";
-            const method = isEditing ? "PUT" : "POST";
-
-            const res = await fetch(url, {
-                method,
-                headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
-                body: JSON.stringify({ imageUrl, redirectLink: redirectLink || null })
-            });
-            if (!res.ok) throw new Error(`Failed to ${isEditing ? "update" : "create"} banner`);
-            const savedBanner = await res.json();
-
+            const saved = await authFetcher<Banner>(
+                isEditing ? `/admin/banners/${editingId}` : "/admin/banners",
+                {
+                    method: isEditing ? "PUT" : "POST",
+                    body: JSON.stringify({ imageUrl, redirectLink: redirectLink || null }),
+                }
+            );
             if (isEditing) {
-                setBanners(prev => prev.map(b => b.id === editingId ? savedBanner : b));
+                mutate(prev => (prev || []).map(b => b.id === editingId ? saved : b), { revalidate: false });
             } else {
-                setBanners([...banners, savedBanner]);
+                mutate(prev => [...(prev || []), saved], { revalidate: false });
             }
             closeForm();
-        } catch (err: any) { alert(err.message); }
-        finally { setIsSubmitting(false); }
+            revalidateBanners();
+        } catch (err: any) {
+            alert(err.message);
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     const handleEdit = (banner: Banner) => {
@@ -86,104 +83,76 @@ export default function AdminBannersPage() {
         setShowForm(true);
     };
 
-    const closeForm = () => {
-        setShowForm(false);
-        setEditingId(null);
-        setImageUrl("");
-        setRedirectLink("");
-    };
-
     return (
         <div style={{ paddingBottom: "3rem" }}>
+            <style>{`@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}`}</style>
+
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "2rem" }}>
                 <div>
                     <h1 style={{ fontSize: "2rem", fontWeight: 800, color: "var(--text-primary)" }}>Banners</h1>
                     <p style={{ color: "var(--text-secondary)" }}>Manage promotional homepage banners</p>
                 </div>
-                <button onClick={() => { closeForm(); setShowForm(true); }} className="btn-primary" style={{ padding: "0.6rem 1.2rem", display: "flex", gap: "0.5rem", alignItems: "center" }}>
+                <button onClick={() => { closeForm(); setShowForm(true); }} className="btn-primary"
+                    style={{ padding: "0.6rem 1.2rem", display: "flex", gap: "0.5rem", alignItems: "center" }}>
                     <span style={{ fontSize: "1.2rem" }}>+</span> Add Banner
                 </button>
             </div>
 
-            {error && <div style={{ color: "rgb(239, 68, 68)", padding: "1rem", background: "rgba(239, 68, 68, 0.1)", borderRadius: "var(--radius-md)", marginBottom: "1.5rem" }}>Error: {error}</div>}
-
-            {isLoading ? (
-                <div style={{ color: "var(--text-secondary)" }}>Loading banners...</div>
-            ) : (
-                <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
-                    {banners.map(banner => (
-                        <div key={banner.id} style={{
-                            background: "var(--surface)", borderRadius: "var(--radius-lg)", border: "1px solid var(--border)",
-                            overflow: "hidden", display: "flex", flexDirection: "column", boxShadow: "var(--shadow-sm)"
-                        }}>
-                            {/* Banner Preview */}
-                            <div style={{ width: "100%", height: "200px", background: "var(--bg)", position: "relative", overflow: "hidden" }}>
-                                <img src={banner.imageUrl} alt={`Banner ${banner.id}`} style={{ width: "100%", height: "100%", objectFit: "cover", opacity: 0.8 }} />
-                                {/* Preview Overlay Text */}
-                                {banner.redirectLink ? (
-                                    <div style={{ position: "absolute", top: "50%", transform: "translateY(-50%)", padding: "0 3rem" }}>
-                                        <div style={{ padding: "0.4rem 0.8rem", background: "rgba(0,0,0,0.5)", color: "white", borderRadius: "var(--radius-sm)", display: "inline-block", fontSize: "0.85rem" }}>
-                                            🔗 {banner.redirectLink}
-                                        </div>
-                                    </div>
-                                ) : null}
-                            </div>
-                            {/* Banner Meta & Actions */}
-                            <div style={{ padding: "1rem 1.5rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                                <div style={{ color: "var(--text-secondary)", fontSize: "0.9rem" }}>Banner ID: #{banner.id}</div>
-                                <div style={{ display: "flex", gap: "0.5rem" }}>
-                                    <button onClick={() => handleEdit(banner)} style={{
-                                        background: "var(--bg)", color: "var(--vet-blue)", border: "1px solid var(--border)",
-                                        padding: "0.5rem 1rem", borderRadius: "var(--radius-sm)", fontSize: "0.9rem", fontWeight: 600,
-                                        cursor: "pointer", transition: "all var(--transition)"
-                                    }}>
-                                        Edit
-                                    </button>
-                                    <button onClick={() => handleDelete(banner.id)} style={{
-                                        background: "rgba(239, 68, 68, 0.1)", color: "rgb(239, 68, 68)", border: "none",
-                                        padding: "0.5rem 1rem", borderRadius: "var(--radius-sm)", fontSize: "0.9rem", fontWeight: 600,
-                                        cursor: "pointer", transition: "all var(--transition)"
-                                    }}>
-                                        Delete
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    ))}
-                    {banners.length === 0 && (
-                        <div style={{ padding: "3rem", textAlign: "center", color: "var(--text-secondary)", background: "var(--surface)", borderRadius: "var(--radius-lg)", border: "1px dashed var(--border)" }}>
-                            No banners currently active. Add one to feature promotions on the homepage.
-                        </div>
-                    )}
+            {error && (
+                <div style={{ color: "rgb(239, 68, 68)", padding: "1rem", background: "rgba(239, 68, 68, 0.1)", borderRadius: "var(--radius-md)", marginBottom: "1.5rem" }}>
+                    ⚠ {error.message}
                 </div>
             )}
 
-            {/* Add Banner Form */}
+            <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+                {isLoading ? (
+                    Array.from({ length: 2 }).map((_, i) => <BannerSkeleton key={i} />)
+                ) : banners.length === 0 ? (
+                    <div style={{ padding: "3rem", textAlign: "center", color: "var(--text-secondary)", background: "var(--surface)", borderRadius: "var(--radius-lg)", border: "1px dashed var(--border)" }}>
+                        No banners currently active. Add one to feature promotions on the homepage.
+                    </div>
+                ) : banners.map(banner => (
+                    <div key={banner.id} style={{ background: "var(--surface)", borderRadius: "var(--radius-lg)", border: "1px solid var(--border)", overflow: "hidden", boxShadow: "var(--shadow-sm)" }}>
+                        <div style={{ width: "100%", height: "200px", background: "var(--bg)", position: "relative", overflow: "hidden" }}>
+                            <img src={banner.imageUrl} alt={`Banner ${banner.id}`} style={{ width: "100%", height: "100%", objectFit: "cover", opacity: 0.8 }} />
+                            {banner.redirectLink && (
+                                <div style={{ position: "absolute", top: "50%", transform: "translateY(-50%)", padding: "0 3rem" }}>
+                                    <div style={{ padding: "0.4rem 0.8rem", background: "rgba(0,0,0,0.5)", color: "white", borderRadius: "var(--radius-sm)", display: "inline-block", fontSize: "0.85rem" }}>
+                                        🔗 {banner.redirectLink}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                        <div style={{ padding: "1rem 1.5rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                            <div style={{ color: "var(--text-secondary)", fontSize: "0.9rem" }}>Banner ID: #{banner.id}</div>
+                            <div style={{ display: "flex", gap: "0.5rem" }}>
+                                <button onClick={() => handleEdit(banner)}
+                                    style={{ background: "var(--bg)", color: "var(--vet-blue)", border: "1px solid var(--border)", padding: "0.5rem 1rem", borderRadius: "var(--radius-sm)", fontSize: "0.9rem", fontWeight: 600, cursor: "pointer" }}>
+                                    Edit
+                                </button>
+                                <button onClick={() => handleDelete(banner.id)}
+                                    style={{ background: "rgba(239, 68, 68, 0.1)", color: "rgb(239, 68, 68)", border: "none", padding: "0.5rem 1rem", borderRadius: "var(--radius-sm)", fontSize: "0.9rem", fontWeight: 600, cursor: "pointer" }}>
+                                    Delete
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                ))}
+            </div>
+
+            {/* Modal */}
             <AnimatePresence>
                 {showForm && (
                     <>
-                        <motion.div
-                            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                             onClick={closeForm}
-                            style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)", zIndex: 300 }}
-                        />
+                            style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)", zIndex: 300 }} />
                         <div style={{ position: "fixed", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 301, pointerEvents: "none" }}>
-                            <motion.div
-                                initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                                style={{
-                                    background: "var(--surface)", borderRadius: "var(--radius-lg)", padding: "2rem",
-                                    width: "min(500px, 90vw)", pointerEvents: "all", boxShadow: "var(--shadow-lg)"
-                                }}
-                            >
+                            <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                                style={{ background: "var(--surface)", borderRadius: "var(--radius-lg)", padding: "2rem", width: "min(500px, 90vw)", pointerEvents: "all", boxShadow: "var(--shadow-lg)" }}>
                                 <h2 style={{ marginBottom: "1.5rem", fontSize: "1.5rem" }}>{editingId ? "Edit Banner" : "Create Banner"}</h2>
                                 <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "1.2rem" }}>
-                                    <div>
-                                        <ImageUpload
-                                            label="Banner Image"
-                                            value={imageUrl}
-                                            onUpload={(url: string) => setImageUrl(url)}
-                                        />
-                                    </div>
+                                    <ImageUpload label="Banner Image" value={imageUrl} onUpload={(url: string) => setImageUrl(url)} />
                                     <div>
                                         <label style={{ display: "block", fontSize: "0.85rem", fontWeight: 600, color: "var(--text-secondary)", marginBottom: "0.4rem" }}>Redirect Link (Optional)</label>
                                         <input type="text" value={redirectLink} onChange={e => setRedirectLink(e.target.value)}

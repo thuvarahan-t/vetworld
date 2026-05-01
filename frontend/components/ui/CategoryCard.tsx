@@ -23,22 +23,26 @@ export default function CategoryCard({ category }: Props) {
                     justifyContent: "flex-start",
                     height: "100%",
                     gap: "0.75rem",
-                    background: "var(--surface)",
+                    background: "rgba(255, 255, 255, 0.4)",
+                    backdropFilter: "blur(8px)",
+                    WebkitBackdropFilter: "blur(8px)",
                     borderRadius: "var(--radius-md)",
                     padding: "1.25rem 1rem",
                     textAlign: "center",
-                    /* Unified soft shadow — no hard border */
-                    boxShadow: "0 2px 8px rgba(0,0,0,0.06), 0 0 0 1px rgba(0,0,0,0.04)",
-                    transition: "box-shadow 0.2s ease, transform 0.2s ease",
+                    border: "1px solid rgba(255, 255, 255, 0.5)",
+                    boxShadow: "0 4px 20px rgba(0,0,0,0.04)",
+                    transition: "all 0.2s ease",
                     cursor: "pointer",
                 }}
                 onMouseEnter={(e) => {
-                    (e.currentTarget as HTMLAnchorElement).style.boxShadow =
-                        "0 8px 24px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.04)";
+                    (e.currentTarget as HTMLAnchorElement).style.background = "rgba(255, 255, 255, 0.7)";
+                    (e.currentTarget as HTMLAnchorElement).style.boxShadow = "0 8px 32px rgba(0,0,0,0.1)";
+                    (e.currentTarget as HTMLAnchorElement).style.borderColor = "rgba(255, 255, 255, 0.8)";
                 }}
                 onMouseLeave={(e) => {
-                    (e.currentTarget as HTMLAnchorElement).style.boxShadow =
-                        "0 2px 8px rgba(0,0,0,0.06), 0 0 0 1px rgba(0,0,0,0.04)";
+                    (e.currentTarget as HTMLAnchorElement).style.background = "rgba(255, 255, 255, 0.4)";
+                    (e.currentTarget as HTMLAnchorElement).style.boxShadow = "0 4px 20px rgba(0,0,0,0.04)";
+                    (e.currentTarget as HTMLAnchorElement).style.borderColor = "rgba(255, 255, 255, 0.5)";
                 }}
             >
                 <div

@@ -2,10 +2,11 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useCartStore } from "@/store/cartStore";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import AuthModal, { User } from "./AuthModal";
+import ProfileModal from "./ProfileModal";
 
 export default function Navbar() {
     const router = useRouter();
@@ -19,6 +20,8 @@ export default function Navbar() {
     const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
     const [isSearchFocused, setIsSearchFocused] = useState(false);
+    const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
+    const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
 
     const confirmLogout = () => {
         setUser(null);
@@ -61,181 +64,188 @@ export default function Navbar() {
     const renderAuth = () => {
         if (!isMounted) return null;
 
-        return (
-            <>
-                {/* Admin Buttons (Only visible if isAdmin) */}
-                {user?.isAdmin && (
-                    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                        <Link
-                            href="/admin"
-                            style={{
-                                display: "flex",
-                                alignItems: "center",
-                                gap: "0.4rem",
-                                background: "var(--vet-orange)",
-                                color: "#fff",
-                                fontWeight: 600,
-                                fontSize: "0.9rem",
-                                padding: "0.5rem 1rem",
-                                borderRadius: "var(--radius-sm)",
-                                transition: "filter var(--transition)",
-                            }}
-                            onMouseEnter={(e) => e.currentTarget.style.filter = "brightness(1.1)"}
-                            onMouseLeave={(e) => e.currentTarget.style.filter = "brightness(1)"}
-                        >
-                            <DashboardIcon />
-                            <span>Dashboard</span>
-                        </Link>
-
-                        <button
-                            onClick={() => setShowLogoutConfirm(true)}
-                            style={{
-                                display: "flex",
-                                alignItems: "center",
-                                gap: "0.4rem",
-                                background: "rgba(239, 68, 68, 0.1)", // Light red background
-                                color: "rgb(239, 68, 68)", // Red text
-                                fontWeight: 600,
-                                fontSize: "0.9rem",
-                                padding: "0.5rem 1rem",
-                                borderRadius: "var(--radius-sm)",
-                                border: "1px solid rgba(239, 68, 68, 0.2)",
-                                transition: "all var(--transition)",
-                                cursor: "pointer",
-                            }}
-                            onMouseEnter={(e) => {
-                                e.currentTarget.style.background = "rgba(239, 68, 68, 0.15)";
-                            }}
-                            onMouseLeave={(e) => {
-                                e.currentTarget.style.background = "rgba(239, 68, 68, 0.1)";
-                            }}
-                        >
-                            <LogoutIcon />
-                            <span>Logout</span>
-                        </button>
-                    </div>
-                )}
-
-                {/* Auth: Regular User (logged in) */}
-                {!user?.isAdmin && user && (
-                    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                        {/* Greeting */}
-                        <span style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "0.4rem",
-                            fontWeight: 600,
-                            fontSize: "0.9rem",
-                            color: "var(--text-primary)",
-                            padding: "0.5rem 1rem",
-                            borderRadius: "var(--radius-sm)",
-                            border: "1.5px solid var(--border)",
-                        }}>
-                            <UserIcon />
-                            Hi {user.name}!
-                        </span>
-
-                        <Link
-                            href="/orders"
-                            style={{
-                                display: "flex",
-                                alignItems: "center",
-                                gap: "0.4rem",
-                                background: "var(--bg)",
-                                color: "var(--text-primary)",
-                                fontWeight: 600,
-                                fontSize: "0.9rem",
-                                padding: "0.5rem 1rem",
-                                borderRadius: "var(--radius-sm)",
-                                border: "1.5px solid var(--border)",
-                                transition: "all var(--transition)",
-                            }}
-                            onMouseEnter={(e) => {
-                                e.currentTarget.style.borderColor = "var(--vet-blue)";
-                                e.currentTarget.style.color = "var(--vet-blue)";
-                            }}
-                            onMouseLeave={(e) => {
-                                e.currentTarget.style.borderColor = "var(--border)";
-                                e.currentTarget.style.color = "var(--text-primary)";
-                            }}
-                        >
-                            📦 My Orders
-                        </Link>
-
-                        {/* Logout Button */}
-                        <button
-                            onClick={() => setShowLogoutConfirm(true)}
-                            style={{
-                                display: "flex",
-                                alignItems: "center",
-                                gap: "0.4rem",
-                                background: "rgba(239, 68, 68, 0.1)",
-                                color: "rgb(239, 68, 68)",
-                                fontWeight: 600,
-                                fontSize: "0.9rem",
-                                padding: "0.5rem 1rem",
-                                borderRadius: "var(--radius-sm)",
-                                border: "1px solid rgba(239, 68, 68, 0.2)",
-                                transition: "all var(--transition)",
-                                cursor: "pointer",
-                            }}
-                            onMouseEnter={(e) => {
-                                e.currentTarget.style.background = "rgba(239, 68, 68, 0.15)";
-                            }}
-                            onMouseLeave={(e) => {
-                                e.currentTarget.style.background = "rgba(239, 68, 68, 0.1)";
-                            }}
-                        >
-                            <LogoutIcon />
-                            <span>Logout</span>
-                        </button>
-                    </div>
-                )}
-
-                {/* Auth: Not logged in -> Show Login button */}
-                {!user && (
+        if (user) {
+            return (
+                <div style={{ position: "relative" }}>
                     <button
-                        onClick={() => setIsAuthModalOpen(true)}
+                        onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
                         style={{
                             display: "flex",
                             alignItems: "center",
-                            gap: "0.4rem",
-                            background: "transparent",
-                            color: "var(--text-primary)",
-                            fontWeight: 600,
-                            fontSize: "0.9rem",
-                            padding: "0.5rem 1rem",
-                            borderRadius: "var(--radius-sm)",
+                            justifyContent: "center",
+                            width: "40px",
+                            height: "40px",
+                            borderRadius: "50%",
+                            background: "var(--vet-blue-light)",
+                            color: "var(--vet-blue)",
                             border: "1.5px solid var(--border)",
-                            transition: "all var(--transition)",
                             cursor: "pointer",
+                            transition: "all var(--transition)",
+                            overflow: "hidden",
+                            padding: 0,
                         }}
                         onMouseEnter={(e) => {
                             e.currentTarget.style.borderColor = "var(--vet-blue)";
-                            e.currentTarget.style.color = "var(--vet-blue)";
                         }}
                         onMouseLeave={(e) => {
-                            e.currentTarget.style.borderColor = "var(--border)";
-                            e.currentTarget.style.color = "var(--text-primary)";
+                            if (!isProfileDropdownOpen) e.currentTarget.style.borderColor = "var(--border)";
                         }}
                     >
-                        <UserIcon />
-                        <span>Login</span>
+                        <UserIcon size={22} />
                     </button>
-                )}
-            </>
+
+                    <AnimatePresence>
+                        {isProfileDropdownOpen && (
+                            <>
+                                <div 
+                                    style={{ position: "fixed", inset: 0, zIndex: 90 }} 
+                                    onClick={() => setIsProfileDropdownOpen(false)} 
+                                />
+                                <motion.div
+                                    initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                                    exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                                    style={{
+                                        position: "absolute",
+                                        top: "calc(100% + 12px)",
+                                        right: 0,
+                                        width: "240px",
+                                        background: "var(--surface)",
+                                        borderRadius: "var(--radius-md)",
+                                        boxShadow: "var(--shadow-lg)",
+                                        border: "1px solid var(--border)",
+                                        zIndex: 100,
+                                        overflow: "hidden",
+                                    }}
+                                >
+                                    {/* User Info Header */}
+                                    <div style={{ padding: "1.25rem", borderBottom: "1px solid var(--border)", background: "var(--bg)" }}>
+                                        <div style={{ fontWeight: 700, color: "var(--text-primary)", fontSize: "0.95rem" }}>{user.name}</div>
+                                        <div style={{ color: "var(--text-secondary)", fontSize: "0.8rem", marginTop: "0.2rem" }}>{user.email}</div>
+                                    </div>
+
+                                    {/* Menu Items */}
+                                    <div style={{ padding: "0.5rem" }}>
+                                        <button
+                                            onClick={() => {
+                                                setIsProfileDropdownOpen(false);
+                                                setIsProfileModalOpen(true);
+                                            }}
+                                            style={{
+                                                width: "100%",
+                                                display: "flex",
+                                                alignItems: "center",
+                                                gap: "0.75rem",
+                                                padding: "0.75rem 0.85rem",
+                                                borderRadius: "var(--radius-sm)",
+                                                border: "none",
+                                                background: "transparent",
+                                                color: "var(--text-primary)",
+                                                fontWeight: 500,
+                                                fontSize: "0.9rem",
+                                                cursor: "pointer",
+                                                transition: "all 0.2s",
+                                                textAlign: "left",
+                                            }}
+                                            onMouseEnter={(e) => {
+                                                e.currentTarget.style.background = "var(--bg)";
+                                                e.currentTarget.style.color = "var(--vet-blue)";
+                                            }}
+                                            onMouseLeave={(e) => {
+                                                e.currentTarget.style.background = "transparent";
+                                                e.currentTarget.style.color = "var(--text-primary)";
+                                            }}
+                                        >
+                                            <span style={{ fontSize: "1.1rem" }}>👤</span>
+                                            <span>My Profile</span>
+                                        </button>
+
+                                        {user.isAdmin && (
+                                            <DropdownLink href="/admin" icon={<DashboardIcon />} label="Admin Dashboard" onClick={() => setIsProfileDropdownOpen(false)} />
+                                        )}
+                                        
+                                        <div style={{ height: "1px", background: "var(--border)", margin: "0.5rem" }} />
+                                        
+                                        <button
+                                            onClick={() => {
+                                                setIsProfileDropdownOpen(false);
+                                                setShowLogoutConfirm(true);
+                                            }}
+                                            style={{
+                                                width: "100%",
+                                                display: "flex",
+                                                alignItems: "center",
+                                                gap: "0.75rem",
+                                                padding: "0.75rem 0.85rem",
+                                                borderRadius: "var(--radius-sm)",
+                                                border: "none",
+                                                background: "transparent",
+                                                color: "rgb(239, 68, 68)",
+                                                fontWeight: 600,
+                                                fontSize: "0.9rem",
+                                                cursor: "pointer",
+                                                transition: "all 0.2s",
+                                                textAlign: "left",
+                                            }}
+                                            onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(239, 68, 68, 0.08)"; }}
+                                            onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+                                        >
+                                            <LogoutIcon />
+                                            <span>Logout</span>
+                                        </button>
+                                    </div>
+                                </motion.div>
+                            </>
+                        )}
+                    </AnimatePresence>
+                </div>
+            );
+        }
+
+        return (
+            <button
+                onClick={() => setIsAuthModalOpen(true)}
+                style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.4rem",
+                    background: "transparent",
+                    color: "var(--text-primary)",
+                    fontWeight: 600,
+                    fontSize: "0.9rem",
+                    padding: "0.5rem 1rem",
+                    borderRadius: "var(--radius-sm)",
+                    border: "1.5px solid var(--border)",
+                    transition: "all var(--transition)",
+                    cursor: "pointer",
+                }}
+                onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = "var(--vet-blue)";
+                    e.currentTarget.style.color = "var(--vet-blue)";
+                }}
+                onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = "var(--border)";
+                    e.currentTarget.style.color = "var(--text-primary)";
+                }}
+            >
+                <UserIcon />
+                <span>Login</span>
+            </button>
         );
     };
 
     return (
         <header
             style={{
-                background: "var(--surface)",
-                borderBottom: "1px solid var(--border)",
-                boxShadow: "var(--shadow-sm)",
                 position: "sticky",
                 top: 0,
                 zIndex: 100,
+                background: "rgba(255, 255, 255, 0.65)",
+                backdropFilter: "blur(12px)",
+                WebkitBackdropFilter: "blur(12px)",
+                borderBottom: "1px solid rgba(255, 255, 255, 0.4)",
+                boxShadow: "0 4px 30px rgba(0, 0, 0, 0.05)",
+                transition: "all var(--transition)",
             }}
         >
             <div className="container-main" style={{ display: "flex", alignItems: "center", height: 64, gap: "1.5rem" }}>
@@ -282,16 +292,18 @@ export default function Navbar() {
                             onBlur={() => setIsSearchFocused(false)}
                             style={{
                                 width: "100%",
-                                padding: "0.6rem 1rem 0.6rem 2.5rem",
-                                borderRadius: "var(--radius-md)",
-                                border: "1.5px solid",
-                                borderColor: isSearchFocused ? "var(--vet-blue)" : "var(--border)",
-                                background: "var(--bg)",
+                                padding: "0.65rem 1rem 0.65rem 2.75rem",
+                                borderRadius: "var(--radius-lg)",
+                                border: "1px solid",
+                                borderColor: isSearchFocused ? "rgba(26,115,232,0.4)" : "rgba(0,0,0,0.05)",
+                                background: isSearchFocused ? "rgba(255, 255, 255, 0.85)" : "rgba(255, 255, 255, 0.4)",
+                                backdropFilter: "blur(10px)",
+                                WebkitBackdropFilter: "blur(10px)",
                                 color: "var(--text-primary)",
                                 outline: "none",
                                 fontSize: "0.9rem",
-                                transition: "all var(--transition)",
-                                boxShadow: isSearchFocused ? "0 0 0 3px rgba(37, 99, 235, 0.1)" : "none"
+                                transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                                boxShadow: isSearchFocused ? "0 8px 32px rgba(26, 115, 232, 0.1)" : "none",
                             }}
                         />
                     </form>
@@ -299,7 +311,36 @@ export default function Navbar() {
 
                 {/* Actions: Cart + Auth */}
                 <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
-                    {renderAuth()}
+                    {/* My Orders (Visible when logged in) */}
+                    {isMounted && user && (
+                        <Link
+                            href="/orders"
+                            style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "0.4rem",
+                                background: "var(--bg)",
+                                color: "var(--text-primary)",
+                                fontWeight: 600,
+                                fontSize: "0.9rem",
+                                padding: "0.5rem 1rem",
+                                borderRadius: "var(--radius-sm)",
+                                border: "1.5px solid var(--border)",
+                                transition: "all var(--transition)",
+                            }}
+                            onMouseEnter={(e) => {
+                                e.currentTarget.style.borderColor = "var(--vet-blue)";
+                                e.currentTarget.style.color = "var(--vet-blue)";
+                            }}
+                            onMouseLeave={(e) => {
+                                e.currentTarget.style.borderColor = "var(--border)";
+                                e.currentTarget.style.color = "var(--text-primary)";
+                            }}
+                        >
+                            <span>📦</span>
+                            <span>My Orders</span>
+                        </Link>
+                    )}
 
                     {/* Cart */}
                     <Link
@@ -332,6 +373,8 @@ export default function Navbar() {
                             </motion.span>
                         )}
                     </Link>
+
+                    {renderAuth()}
                 </div>
             </div>
 
@@ -339,6 +382,13 @@ export default function Navbar() {
                 isOpen={isAuthModalOpen}
                 onClose={() => setIsAuthModalOpen(false)}
                 onLoginSuccess={(u) => setUser(u)}
+            />
+
+            <ProfileModal
+                isOpen={isProfileModalOpen}
+                onClose={() => setIsProfileModalOpen(false)}
+                user={user}
+                onUpdateSuccess={(u) => setUser({ ...user, ...u })}
             />
 
             {/* ── Logout Confirmation Dialog ── */}
@@ -429,6 +479,38 @@ function NavLink({ href, children }: { href: string; children: React.ReactNode }
     );
 }
 
+function DropdownLink({ href, icon, label, onClick }: { href: string; icon: React.ReactNode; label: string; onClick: () => void }) {
+    return (
+        <Link
+            href={href}
+            onClick={onClick}
+            style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "0.75rem",
+                padding: "0.75rem 0.85rem",
+                borderRadius: "var(--radius-sm)",
+                textDecoration: "none",
+                color: "var(--text-primary)",
+                fontWeight: 500,
+                fontSize: "0.9rem",
+                transition: "all 0.2s",
+            }}
+            onMouseEnter={(e) => {
+                e.currentTarget.style.background = "var(--bg)";
+                e.currentTarget.style.color = "var(--vet-blue)";
+            }}
+            onMouseLeave={(e) => {
+                e.currentTarget.style.background = "transparent";
+                e.currentTarget.style.color = "var(--text-primary)";
+            }}
+        >
+            <span style={{ fontSize: "1.1rem", display: "flex", alignItems: "center" }}>{icon}</span>
+            <span>{label}</span>
+        </Link>
+    );
+}
+
 function CartIcon() {
     return (
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -438,9 +520,9 @@ function CartIcon() {
     );
 }
 
-function UserIcon() {
+function UserIcon({ size = 18 }: { size?: number }) {
     return (
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
             <circle cx="12" cy="7" r="4"></circle>
         </svg>

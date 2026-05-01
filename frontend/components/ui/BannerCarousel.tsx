@@ -72,8 +72,11 @@ export default function BannerCarousel({ banners }: Props) {
                 overflow: "hidden",
                 margin: "1.5rem 0",
                 height: "clamp(220px, 40vw, 440px)",
-                background: "var(--surface)",
-                boxShadow: "0 4px 24px rgba(0,0,0,0.10)",
+                background: "rgba(255, 255, 255, 0.4)",
+                backdropFilter: "blur(12px)",
+                WebkitBackdropFilter: "blur(12px)",
+                border: "1px solid rgba(255, 255, 255, 0.4)",
+                boxShadow: "0 8px 32px 0 rgba(31, 38, 135, 0.08)",
             }}
         >
             <AnimatePresence mode="wait">
@@ -155,11 +158,11 @@ function arrowStyle(side: "left" | "right"): React.CSSProperties {
         [side]: 16,
         transform: "translateY(-50%)",
         /* Larger hit area (44px+) with backdrop-blur */
-        background: "rgba(0,0,0,0.30)",
-        backdropFilter: "blur(6px)",
-        WebkitBackdropFilter: "blur(6px)",
-        color: "#fff",
-        border: "1px solid rgba(255,255,255,0.15)",
+        background: "rgba(255,255,255,0.45)",
+        backdropFilter: "blur(10px)",
+        WebkitBackdropFilter: "blur(10px)",
+        color: "var(--text-primary)",
+        border: "1px solid rgba(255,255,255,0.6)",
         borderRadius: "50%",
         width: 48,
         height: 48,
@@ -171,6 +174,6 @@ function arrowStyle(side: "left" | "right"): React.CSSProperties {
         alignItems: "center",
         justifyContent: "center",
         zIndex: 2,
-        transition: "background 0.2s ease, transform 0.15s ease",
+        transition: "all 0.2s ease",
     };
 }

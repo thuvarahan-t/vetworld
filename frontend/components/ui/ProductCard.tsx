@@ -110,22 +110,27 @@ export default function ProductCard({ product }: Props) {
             whileHover={{ y: -6 }}
             transition={{ duration: 0.3, ease: [0.25, 0.1, 0.25, 1] }}
             style={{
-                background: "var(--surface)",
+                background: "rgba(255, 255, 255, 0.45)",
+                backdropFilter: "blur(12px)",
+                WebkitBackdropFilter: "blur(12px)",
                 borderRadius: "var(--radius-lg)",
-                boxShadow: "0 2px 12px rgba(0, 0, 0, 0.04), 0 0 0 1px rgba(0, 0, 0, 0.04)",
+                border: "1px solid rgba(255, 255, 255, 0.4)",
+                boxShadow: "0 8px 32px 0 rgba(31, 38, 135, 0.05)",
                 overflow: "hidden",
                 display: "flex",
                 flexDirection: "column",
                 height: "100%",
-                transition: "box-shadow 0.3s ease",
+                transition: "all 0.3s ease",
             }}
             onMouseEnter={(e) => {
-                (e.currentTarget as HTMLDivElement).style.boxShadow =
-                    "0 20px 40px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.04)";
+                (e.currentTarget as HTMLDivElement).style.background = "rgba(255, 255, 255, 0.75)";
+                (e.currentTarget as HTMLDivElement).style.boxShadow = "0 12px 40px rgba(0, 0, 0, 0.1)";
+                (e.currentTarget as HTMLDivElement).style.borderColor = "rgba(255, 255, 255, 0.7)";
             }}
             onMouseLeave={(e) => {
-                (e.currentTarget as HTMLDivElement).style.boxShadow =
-                    "0 2px 12px rgba(0, 0, 0, 0.04), 0 0 0 1px rgba(0, 0, 0, 0.04)";
+                (e.currentTarget as HTMLDivElement).style.background = "rgba(255, 255, 255, 0.45)";
+                (e.currentTarget as HTMLDivElement).style.boxShadow = "0 8px 32px 0 rgba(31, 38, 135, 0.05)";
+                (e.currentTarget as HTMLDivElement).style.borderColor = "rgba(255, 255, 255, 0.4)";
             }}
         >
             <button

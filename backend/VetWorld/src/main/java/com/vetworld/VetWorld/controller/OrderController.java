@@ -98,6 +98,44 @@ public class OrderController {
         return ResponseEntity.ok(orderService.getUserOrders(user));
     }
 
+    // ── PUT /api/orders/{id}/payment-slip → user uploads slip URL ─────────
+    @PutMapping("/{id}/payment-slip")
+    public ResponseEntity<?> uploadPaymentSlip(
+            @PathVariable Long id,
+            @RequestBody Map<String, String> body,
+            Authentication auth) {
+        try {
+            User user = getCurrentUser(auth);
+            String slipUrl = body.get("paymentSlipUrl");
+            if (slipUrl == null || slipUrl.isBlank()) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Slip URL is required"));
+            }
+            OrderDto updated = orderService.submitPaymentSlip(user, id, slipUrl);
+            return ResponseEntity.ok(updated);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    // ── PUT /api/orders/{id}/bank-details → user submits bank details ─────
+    @PutMapping("/{id}/bank-details")
+    public ResponseEntity<?> submitBankDetails(
+            @PathVariable Long id,
+            @RequestBody Map<String, String> body,
+            Authentication auth) {
+        try {
+            User user = getCurrentUser(auth);
+            String bankDetails = body.get("bankDetails");
+            if (bankDetails == null || bankDetails.isBlank()) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Bank details are required"));
+            }
+            OrderDto updated = orderService.submitBankDetails(user, id, bankDetails);
+            return ResponseEntity.ok(updated);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
     // ── GET /api/orders/{id}/receipt → download PDF ───────────────────────
     @GetMapping("/{id}/receipt")
     public ResponseEntity<byte[]> downloadReceipt(@PathVariable Long id, Authentication auth) {
