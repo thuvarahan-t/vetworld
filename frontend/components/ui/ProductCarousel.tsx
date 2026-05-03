@@ -39,7 +39,7 @@ export default function ProductCarousel({ products }: Props) {
     };
 
     return (
-        <div style={{ position: "relative", margin: "0 -1rem", padding: "0 1rem" }}>
+        <div style={{ position: "relative", margin: "0 -1rem -7rem", padding: "0 1rem" }}>
             {/* Scroll Container */}
             <div
                 ref={scrollRef}
@@ -50,7 +50,7 @@ export default function ProductCarousel({ products }: Props) {
                     overflowX: "auto",
                     scrollSnapType: "x mandatory",
                     scrollBehavior: "smooth",
-                    padding: "0.5rem 0 1.5rem",
+                    padding: "0.5rem 0 8rem",
                     scrollbarWidth: "none", // Hide scrollbar for Firefox
                     msOverflowStyle: "none", // Hide scrollbar for IE/Edge
                 }}
