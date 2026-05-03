@@ -172,7 +172,7 @@ export default function AdminProductsPage() {
                 }))
             };
 
-            const saved = await authFetcher(`/admin/products/${prod.id}`, { method: "PUT", body: JSON.stringify(payload) });
+            const saved = await authFetcher<Product>(`/admin/products/${prod.id}`, { method: "PUT", body: JSON.stringify(payload) });
             mutate(prev => (prev || []).map(p => p.id === prod.id ? saved : p), { revalidate: false });
         } catch (err: any) {
             alert("Failed to update: " + err.message);
