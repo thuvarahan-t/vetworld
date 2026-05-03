@@ -23,6 +23,7 @@ export default function FilterBar({ title, productsCount }: Props) {
     const [sort, setSort] = useState(searchParams.get("sort") || "newest");
     const [inStock, setInStock] = useState(searchParams.get("inStock") === "true");
     const [isSortOpen, setIsSortOpen] = useState(false);
+    const [isSearchFocused, setIsSearchFocused] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
 
     const activeSortLabel = SORT_OPTIONS.find(opt => opt.value === sort)?.label || "Sort";
@@ -87,8 +88,15 @@ export default function FilterBar({ title, productsCount }: Props) {
                 <div style={{ position: "relative", flex: "0 1 280px", display: "flex", alignItems: "center" }}>
                     <motion.div
                         initial={false}
+                        onFocus={() => setIsSearchFocused(true)}
+                        onBlur={() => setIsSearchFocused(false)}
                         animate={{
-                            background: q || isSortOpen ? "rgba(255, 255, 255, 0.4)" : "rgba(255, 255, 255, 0.1)",
+                            background: isSearchFocused 
+                                ? "rgba(255, 255, 255, 0.65)" 
+                                : (q || isSortOpen ? "rgba(255, 255, 255, 0.4)" : "rgba(255, 255, 255, 0.1)"),
+                            backdropFilter: isSearchFocused ? "blur(12px)" : "blur(0px)",
+                            borderColor: isSearchFocused ? "rgba(255, 255, 255, 0.5)" : "rgba(255, 255, 255, 0.1)",
+                            boxShadow: isSearchFocused ? "0 8px 32px rgba(0,0,0,0.06)" : "none",
                             width: "100%",
                             borderRadius: "12px",
                         }}
@@ -97,14 +105,6 @@ export default function FilterBar({ title, productsCount }: Props) {
                             display: "flex",
                             alignItems: "center",
                             border: "1px solid transparent",
-                            transition: "border 0.2s ease",
-                        }}
-                        whileFocusWithin={{
-                            background: "rgba(255, 255, 255, 0.65)",
-                            backdropFilter: "blur(12px)",
-                            WebkitBackdropFilter: "blur(12px)",
-                            borderColor: "rgba(255, 255, 255, 0.5)",
-                            boxShadow: "0 8px 32px rgba(0,0,0,0.06)",
                         }}
                     >
                         <div style={{ paddingLeft: "0.75rem", display: "flex", alignItems: "center", opacity: 0.5 }}>
