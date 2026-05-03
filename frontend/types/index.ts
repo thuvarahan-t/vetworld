@@ -31,7 +31,7 @@ export interface Product {
 export interface Banner {
     id: number;
     imageUrl: string;
-    redirectLink: string;
+    redirectLink?: string;
     createdAt?: string;
 }
 
@@ -52,11 +52,13 @@ export interface CartItem {
 
 export type OrderStatus =
     | 'PENDING_PAYMENT'
+    | 'PAYMENT_REVIEW'
     | 'CONFIRMED'
     | 'PROCESSING'
     | 'PACKED'
     | 'DELIVERED'
-    | 'CANCELLED';
+    | 'CANCELLED'
+    | 'REFUNDED';
 
 export interface OrderItem {
     id: number;
@@ -82,6 +84,10 @@ export interface Order {
     payherePaymentId?: string;
     deliveryDate?: string;
     cancellationReason?: string;
+    paymentSlipUrl?: string;
+    slipRejectionReason?: string;
+    bankDetails?: string;
+    refundReceiptUrl?: string;
     items: OrderItem[];
     createdAt: string;
     updatedAt: string;

@@ -3,6 +3,7 @@ package com.vetworld.VetWorld.controller;
 import com.vetworld.VetWorld.dto.AuthRequest;
 import com.vetworld.VetWorld.dto.AuthResponse;
 import com.vetworld.VetWorld.dto.ForgotPasswordRequest;
+import com.vetworld.VetWorld.dto.ProfileUpdateRequest;
 import com.vetworld.VetWorld.dto.ResetPasswordRequest;
 import com.vetworld.VetWorld.dto.SendSignupOtpRequest;
 import com.vetworld.VetWorld.dto.SignupRequest;
@@ -111,6 +112,8 @@ public class AuthController {
                                                 .name(newUser.getName())
                                                 .email(newUser.getEmail())
                                                 .role(newUser.getRole().name())
+                                                .phone(newUser.getPhone())
+                                                .address(newUser.getAddress())
                                                 .build());
         }
 
@@ -142,6 +145,8 @@ public class AuthController {
                                                 .name(user.getName())
                                                 .email(user.getEmail())
                                                 .role(user.getRole().name())
+                                                .phone(user.getPhone())
+                                                .address(user.getAddress())
                                                 .build());
         }
 
@@ -169,6 +174,43 @@ public class AuthController {
                                                 .name(user.getName())
                                                 .email(user.getEmail())
                                                 .role(user.getRole().name())
+                                                .phone(user.getPhone())
+                                                .address(user.getAddress())
+                                                .build());
+        }
+        
+        /**
+         * PUT /api/auth/profile
+         * Updates currently authenticated user profile.
+         */
+        @PutMapping("/profile")
+        public ResponseEntity<?> updateProfile(@RequestHeader("Authorization") String authHeader, @RequestBody ProfileUpdateRequest request) {
+                if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+                        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                                        .body(Map.of("error", "No token provided."));
+                }
+                String token = authHeader.substring(7);
+                if (!jwtUtil.validateToken(token)) {
+                        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Invalid token."));
+                }
+                String email = jwtUtil.extractUsername(token);
+                User user = userRepository.findByEmail(email)
+                                .orElseThrow(() -> new RuntimeException("User not found"));
+
+                if (request.getName() != null) user.setName(request.getName());
+                if (request.getPhone() != null) user.setPhone(request.getPhone());
+                if (request.getAddress() != null) user.setAddress(request.getAddress());
+
+                userRepository.save(user);
+
+                return ResponseEntity.ok(
+                                AuthResponse.builder()
+                                                .token(token)
+                                                .name(user.getName())
+                                                .email(user.getEmail())
+                                                .role(user.getRole().name())
+                                                .phone(user.getPhone())
+                                                .address(user.getAddress())
                                                 .build());
         }
 

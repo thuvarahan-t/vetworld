@@ -3,7 +3,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import Link from "next/link";
 import type { Product, ProductType } from "@/types";
 import { useCartStore } from "@/store/cartStore";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 interface Props {
@@ -18,6 +18,9 @@ export default function ProductCard({ product }: Props) {
 
     // Manage selected type locally
     const [selectedType, setSelectedType] = useState<ProductType | undefined>(product.types?.[0]);
+    const [isTypeDropdownOpen, setIsTypeDropdownOpen] = useState(false);
+    const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0, width: 0 });
+    const triggerRef = useRef<HTMLButtonElement>(null);
     const [quantity, setQuantity] = useState(1);
 
     const handleAddToCart = (e: React.MouseEvent, customQty?: number) => {
@@ -105,27 +108,56 @@ export default function ProductCard({ product }: Props) {
     const isSelectedTypeSoldOut = !!selectedType?.soldOut;
     const isSoldOut = !!product.soldOut || isSelectedTypeSoldOut;
 
+    // Update dropdown position when opened
+    useEffect(() => {
+        if (!isTypeDropdownOpen || !triggerRef.current) return;
+
+        const updatePos = () => {
+            if (!triggerRef.current) return;
+            const rect = triggerRef.current.getBoundingClientRect();
+            setDropdownPos({
+                top: rect.bottom + window.scrollY,
+                left: rect.left + window.scrollX,
+                width: rect.width
+            });
+        };
+
+        updatePos();
+        window.addEventListener("scroll", updatePos, true);
+        window.addEventListener("resize", updatePos);
+        return () => {
+            window.removeEventListener("scroll", updatePos, true);
+            window.removeEventListener("resize", updatePos);
+        };
+    }, [isTypeDropdownOpen]);
+
     return (
         <motion.div
             whileHover={{ y: -6 }}
             transition={{ duration: 0.3, ease: [0.25, 0.1, 0.25, 1] }}
             style={{
-                background: "var(--surface)",
+                background: "rgba(255, 255, 255, 0.45)",
+                backdropFilter: "blur(12px)",
+                WebkitBackdropFilter: "blur(12px)",
                 borderRadius: "var(--radius-lg)",
-                boxShadow: "0 2px 12px rgba(0, 0, 0, 0.04), 0 0 0 1px rgba(0, 0, 0, 0.04)",
-                overflow: "hidden",
+                border: "1px solid rgba(255, 255, 255, 0.4)",
+                boxShadow: "0 8px 32px 0 rgba(31, 38, 135, 0.05)",
                 display: "flex",
                 flexDirection: "column",
                 height: "100%",
-                transition: "box-shadow 0.3s ease",
+                transition: "all 0.3s ease",
+                position: "relative",
+                zIndex: isTypeDropdownOpen ? 60 : 1,
             }}
             onMouseEnter={(e) => {
-                (e.currentTarget as HTMLDivElement).style.boxShadow =
-                    "0 20px 40px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.04)";
+                (e.currentTarget as HTMLDivElement).style.background = "rgba(255, 255, 255, 0.75)";
+                (e.currentTarget as HTMLDivElement).style.boxShadow = "0 12px 40px rgba(0, 0, 0, 0.1)";
+                (e.currentTarget as HTMLDivElement).style.borderColor = "rgba(255, 255, 255, 0.7)";
             }}
             onMouseLeave={(e) => {
-                (e.currentTarget as HTMLDivElement).style.boxShadow =
-                    "0 2px 12px rgba(0, 0, 0, 0.04), 0 0 0 1px rgba(0, 0, 0, 0.04)";
+                (e.currentTarget as HTMLDivElement).style.background = "rgba(255, 255, 255, 0.45)";
+                (e.currentTarget as HTMLDivElement).style.boxShadow = "0 8px 32px 0 rgba(31, 38, 135, 0.05)";
+                (e.currentTarget as HTMLDivElement).style.borderColor = "rgba(255, 255, 255, 0.4)";
             }}
         >
             <button
@@ -278,30 +310,106 @@ export default function ProductCard({ product }: Props) {
             <div style={{ padding: "0 1rem 1rem", marginTop: "auto", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
                 {product.types && product.types.length > 1 ? (
                     <div style={{ position: "relative" }}>
-                        <select
-                            className="select"
-                            style={{ 
-                                padding: "0.6rem 2rem 0.6rem 0.85rem", 
-                                fontSize: "0.825rem", 
-                                fontWeight: 600,
-                                background: "var(--background)",
-                                border: "1px solid var(--border)",
+                        <button
+                            ref={triggerRef}
+                            type="button"
+                            onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                setIsTypeDropdownOpen(!isTypeDropdownOpen);
+                            }}
+                            style={{
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "space-between",
+                                width: "100%",
+                                padding: "0.6rem 0.85rem",
+                                fontSize: "0.825rem",
+                                fontWeight: 700,
+                                background: "rgba(255, 255, 255, 0.4)",
+                                backdropFilter: "blur(8px)",
+                                border: "1px solid rgba(255, 255, 255, 0.3)",
                                 borderRadius: "var(--radius-md)",
                                 cursor: "pointer",
-                                width: "100%",
-                            }}
-                            value={selectedType?.id || ""}
-                            onChange={(e) => {
-                                const type = product.types?.find(t => t.id === Number(e.target.value));
-                                if (type) setSelectedType(type);
+                                color: "var(--text-primary)",
+                                transition: "all 0.2s ease",
                             }}
                         >
-                            {product.types.map((type) => (
-                                <option key={type.id} value={type.id}>
-                                    {type.typeName}
-                                </option>
-                            ))}
-                        </select>
+                            <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                {selectedType?.typeName || "Select Type"}
+                            </span>
+                            <motion.span animate={{ rotate: isTypeDropdownOpen ? 180 : 0 }}>
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M6 9l6 6 6-6" />
+                                </svg>
+                            </motion.span>
+                        </button>
+
+                        {typeof document !== "undefined" && createPortal(
+                            <AnimatePresence>
+                                {isTypeDropdownOpen && (
+                                    <>
+                                        {/* Backdrop for closing */}
+                                        <div 
+                                            style={{ position: "fixed", inset: 0, zIndex: 999998 }} 
+                                            onClick={() => setIsTypeDropdownOpen(false)}
+                                        />
+                                        <motion.div
+                                            initial={{ opacity: 0, y: -4, scale: 0.98 }}
+                                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                                            exit={{ opacity: 0, y: -4, scale: 0.98 }}
+                                            transition={{ duration: 0.15 }}
+                                            style={{
+                                                position: "absolute",
+                                                top: dropdownPos.top + 6,
+                                                left: dropdownPos.left,
+                                                width: dropdownPos.width,
+                                                maxHeight: "280px",
+                                                overflowY: "auto",
+                                                background: "rgba(255, 255, 255, 0.95)",
+                                                backdropFilter: "blur(16px)",
+                                                WebkitBackdropFilter: "blur(16px)",
+                                                borderRadius: "12px",
+                                                border: "1px solid rgba(255, 255, 255, 0.5)",
+                                                boxShadow: "0 10px 40px rgba(0,0,0,0.15)",
+                                                padding: "0.4rem",
+                                                zIndex: 999999,
+                                            }}
+                                            className="custom-scrollbar"
+                                        >
+                                            {product.types.map((type) => (
+                                                <button
+                                                    key={type.id}
+                                                    type="button"
+                                                    onClick={(e) => {
+                                                        e.preventDefault();
+                                                        e.stopPropagation();
+                                                        setSelectedType(type);
+                                                        setIsTypeDropdownOpen(false);
+                                                    }}
+                                                    style={{
+                                                        width: "100%",
+                                                        textAlign: "left",
+                                                        padding: "0.5rem 0.75rem",
+                                                        borderRadius: "8px",
+                                                        border: "none",
+                                                        background: selectedType?.id === type.id ? "rgba(26,115,232,0.1)" : "transparent",
+                                                        color: selectedType?.id === type.id ? "var(--vet-blue)" : "var(--text-primary)",
+                                                        fontSize: "0.8rem",
+                                                        fontWeight: selectedType?.id === type.id ? 700 : 500,
+                                                        cursor: "pointer",
+                                                        transition: "all 0.2s",
+                                                    }}
+                                                >
+                                                    {type.typeName}
+                                                </button>
+                                            ))}
+                                        </motion.div>
+                                    </>
+                                )}
+                            </AnimatePresence>,
+                            document.body
+                        )}
                     </div>
                 ) : product.types && product.types.length === 1 ? (
                     <div style={{

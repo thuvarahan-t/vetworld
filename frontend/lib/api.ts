@@ -3,7 +3,7 @@ const SERVER_API_BASE_URL =
     process.env.NEXT_PUBLIC_API_URL ||
     "http://localhost:8080";
 
-const DEFAULT_FETCH_TIMEOUT_MS = Number(process.env.API_TIMEOUT_MS || 10000);
+const DEFAULT_FETCH_TIMEOUT_MS = Number(process.env.API_TIMEOUT_MS || 30000); // 30s for Render cold start
 
 function getApiBaseUrl() {
     // Browser requests should go through Next.js rewrite (/api -> backend)
@@ -115,6 +115,21 @@ export const userApi = {
 
     getMyOrders: () => authFetcher<Order[]>("/orders/my"),
 
+    uploadPaymentSlip: (orderId: number, paymentSlipUrl: string) =>
+        authFetcher<Order>(`/orders/${orderId}/payment-slip`, {
+            method: 'PUT',
+            body: JSON.stringify({ paymentSlipUrl }),
+        }),
+
+    submitBankDetails: (orderId: number, bankDetails: string) =>
+        authFetcher<Order>(`/orders/${orderId}/bank-details`, {
+            method: 'PUT',
+            body: JSON.stringify({ bankDetails }),
+        }),
+
+    updateProfile: (data: { name: string; phone: string; address: string }) =>
+        authFetcher<any>("/auth/profile", { method: "PUT", body: JSON.stringify(data) }),
+
     downloadReceipt: async (orderId: number): Promise<void> => {
         const token = typeof window !== "undefined" ? localStorage.getItem("vetworld_token") : null;
         const API_BASE_URL = getApiBaseUrl();
@@ -190,6 +205,22 @@ export const adminApi = {
         authFetcher<Order>(`/admin/orders/${id}`, { method: "PUT", body: JSON.stringify(data) }),
     cancelOrder: (id: number, reason: string) =>
         authFetcher<Order>(`/admin/orders/${id}/cancel`, { method: "PUT", body: JSON.stringify({ reason }) }),
+
+    approvePaymentSlip: (orderId: number) =>
+        authFetcher<Order>(`/admin/orders/${orderId}/approve-slip`, { method: 'PUT' }),
+
+    rejectPaymentSlip: (orderId: number, reason: string) =>
+        authFetcher<Order>(`/admin/orders/${orderId}/reject-slip`, {
+            method: 'PUT',
+            body: JSON.stringify({ reason }),
+        }),
+
+    processRefund: (orderId: number, refundReceiptUrl: string) =>
+        authFetcher<Order>(`/admin/orders/${orderId}/refund`, {
+            method: 'PUT',
+            body: JSON.stringify({ refundReceiptUrl }),
+        }),
+
     downloadAdminReceipt: async (orderId: number, orderNumber: string): Promise<void> => {
         const token = typeof window !== "undefined" ? localStorage.getItem("vetworld_token") : null;
         const API_BASE_URL = getApiBaseUrl();

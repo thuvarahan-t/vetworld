@@ -6,6 +6,8 @@ export interface User {
     name: string;
     email?: string;
     isAdmin?: boolean;
+    phone?: string;
+    address?: string;
 }
 
 interface Props {

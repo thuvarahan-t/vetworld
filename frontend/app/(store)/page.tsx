@@ -1,6 +1,7 @@
 import { api } from "@/lib/api";
 import BannerCarousel from "@/components/ui/BannerCarousel";
 import ProductCard from "@/components/ui/ProductCard";
+import ProductCarousel from "@/components/ui/ProductCarousel";
 import CategoryCard from "@/components/ui/CategoryCard";
 import Link from "next/link";
 import type { Banner, Product, Category } from "@/types";
@@ -30,7 +31,12 @@ export default async function HomePage() {
   const { banners, topSelling, recent, categories } = await getData();
 
   return (
-    <main>
+    <main style={{ position: "relative", overflow: "hidden" }}>
+      {/* ── Background Decorative Elements ──────────────── */}
+      <div style={{ position: "fixed", top: "-10%", left: "-5%", width: "40vw", height: "40vw", borderRadius: "50%", background: "radial-gradient(circle, rgba(26,115,232,0.15) 0%, transparent 70%)", filter: "blur(60px)", zIndex: -1 }}></div>
+      <div style={{ position: "fixed", bottom: "10%", right: "-5%", width: "35vw", height: "35vw", borderRadius: "50%", background: "radial-gradient(circle, rgba(249,115,22,0.1) 0%, transparent 70%)", filter: "blur(60px)", zIndex: -1 }}></div>
+      <div style={{ position: "fixed", top: "40%", right: "10%", width: "25vw", height: "25vw", borderRadius: "50%", background: "radial-gradient(circle, rgba(13,158,110,0.1) 0%, transparent 70%)", filter: "blur(60px)", zIndex: -1 }}></div>
+
       {/* ── Banner Carousel ─────────────────────────────── */}
       <section className="container-main">
         <BannerCarousel banners={banners as Banner[]} />
@@ -44,7 +50,9 @@ export default async function HomePage() {
             subtitle="Our most popular veterinary and lab equipment"
             href="/category/all?filter=top"
           />
-          <ProductGrid products={topSelling as Product[]} />
+          <div className="glass-morphism" style={{ padding: "1.5rem", marginTop: "1rem" }}>
+            <ProductCarousel products={topSelling as Product[]} />
+          </div>
         </section>
       )}
 
@@ -56,7 +64,9 @@ export default async function HomePage() {
             subtitle="Fresh arrivals in our product catalogue"
             href="/category/all?filter=recent"
           />
-          <ProductGrid products={(recent as Product[]).slice(0, 8)} />
+          <div className="glass-morphism" style={{ padding: "1.5rem", marginTop: "1rem" }}>
+            <ProductCarousel products={(recent as Product[]).slice(0, 10)} />
+          </div>
         </section>
       )}
 
@@ -64,23 +74,26 @@ export default async function HomePage() {
       {(categories as Category[]).length > 0 && (
         <section
           className="section"
-          style={{ background: "linear-gradient(to bottom, var(--background), var(--vet-blue-light))", marginTop: "1rem" }}
+          style={{ marginTop: "1rem", position: "relative" }}
         >
           <div className="container-main">
-            <SectionHeader
-              title="🧬 Browse by Category"
-              subtitle="Find the equipment you need by category"
-            />
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))",
-                gap: "1rem",
-              }}
-            >
-              {(categories as Category[]).map((cat) => (
-                <CategoryCard key={cat.id} category={cat} />
-              ))}
+            <div className="glass-morphism" style={{ padding: "3rem 2rem", background: "rgba(232, 240, 254, 0.4)" }}>
+              <SectionHeader
+                title="🧬 Browse by Category"
+                subtitle="Find the equipment you need by category"
+              />
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))",
+                  gap: "1.5rem",
+                  marginTop: "1.5rem"
+                }}
+              >
+                {(categories as Category[]).map((cat) => (
+                  <CategoryCard key={cat.id} category={cat} />
+                ))}
+              </div>
             </div>
           </div>
         </section>
@@ -121,22 +134,6 @@ function SectionHeader({ title, subtitle, href }: { title: string; subtitle: str
           View all →
         </Link>
       )}
-    </div>
-  );
-}
-
-function ProductGrid({ products }: { products: Product[] }) {
-  return (
-    <div
-      style={{
-        display: "grid",
-        gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))",
-        gap: "1.25rem",
-      }}
-    >
-      {products.map((p) => (
-        <ProductCard key={p.id} product={p} />
-      ))}
     </div>
   );
 }

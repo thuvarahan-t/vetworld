@@ -84,6 +84,59 @@ public class OrderService {
         }
     }
 
+    // ── User: Submit payment slip ─────────────────────────────────────────
+    @Transactional
+    public OrderDto submitPaymentSlip(User user, Long orderId, String slipUrl) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Order not found"));
+
+        if (!order.getUser().getId().equals(user.getId())) {
+            throw new RuntimeException("Access denied");
+        }
+        if (order.getStatus() != OrderStatus.PENDING_PAYMENT) {
+            throw new RuntimeException("Payment slip can only be uploaded for orders awaiting payment.");
+        }
+
+        order.setPaymentSlipUrl(slipUrl);
+        order.setSlipRejectionReason(null);
+        order.setStatus(OrderStatus.PAYMENT_REVIEW);
+
+        return OrderDto.fromEntity(orderRepository.save(order));
+    }
+
+    // ── Admin: Approve payment slip ───────────────────────────────────────
+    @Transactional
+    public OrderDto approvePaymentSlip(Long orderId) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Order not found"));
+
+        if (order.getStatus() != OrderStatus.PAYMENT_REVIEW) {
+            throw new RuntimeException("Order is not awaiting slip review.");
+        }
+
+        order.setStatus(OrderStatus.CONFIRMED);
+        Order saved = orderRepository.save(order);
+        sendConfirmationEmail(saved);
+        return OrderDto.fromEntity(saved);
+    }
+
+    // ── Admin: Reject payment slip ────────────────────────────────────────
+    @Transactional
+    public OrderDto rejectPaymentSlip(Long orderId, String reason) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Order not found"));
+
+        if (order.getStatus() != OrderStatus.PAYMENT_REVIEW) {
+            throw new RuntimeException("Order is not awaiting slip review.");
+        }
+
+        order.setStatus(OrderStatus.PENDING_PAYMENT);
+        order.setSlipRejectionReason(reason);
+        Order saved = orderRepository.save(order);
+        sendSlipRejectionEmail(saved, reason);
+        return OrderDto.fromEntity(saved);
+    }
+
     // ── Get user's orders ─────────────────────────────────────────────────
     public List<OrderDto> getUserOrders(User user) {
         return orderRepository.findByUserOrderByCreatedAtDesc(user)
@@ -129,12 +182,51 @@ public class OrderService {
         Order order = orderRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Order not found: " + id));
 
+        if (order.getStatus() == OrderStatus.CANCELLED || order.getStatus() == OrderStatus.REFUNDED) {
+            throw new RuntimeException("Order is already " + order.getStatus().name());
+        }
+
         order.setStatus(OrderStatus.CANCELLED);
         order.setCancellationReason(reason);
         Order saved = orderRepository.save(order);
 
         sendCancellationEmail(saved);
 
+        return OrderDto.fromEntity(saved);
+    }
+
+    // ── User: submit bank details for refund ──────────────────────────────
+    @Transactional
+    public OrderDto submitBankDetails(User user, Long orderId, String bankDetails) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Order not found: " + orderId));
+
+        if (!order.getUser().getId().equals(user.getId())) {
+            throw new RuntimeException("Access denied");
+        }
+        if (order.getStatus() != OrderStatus.CANCELLED) {
+            throw new RuntimeException("Bank details can only be submitted for cancelled orders.");
+        }
+
+        order.setBankDetails(bankDetails);
+        return OrderDto.fromEntity(orderRepository.save(order));
+    }
+
+    // ── Admin: process refund ─────────────────────────────────────────────
+    @Transactional
+    public OrderDto processRefund(Long orderId, String refundReceiptUrl) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Order not found: " + orderId));
+
+        if (order.getStatus() != OrderStatus.CANCELLED) {
+            throw new RuntimeException("Only cancelled orders can be refunded.");
+        }
+
+        order.setStatus(OrderStatus.REFUNDED);
+        order.setRefundReceiptUrl(refundReceiptUrl);
+        Order saved = orderRepository.save(order);
+
+        sendRefundEmail(saved);
         return OrderDto.fromEntity(saved);
     }
 
@@ -178,8 +270,40 @@ public class OrderService {
         if (order.getCancellationReason() != null && !order.getCancellationReason().isBlank()) {
             body.append("Reason: ").append(order.getCancellationReason()).append("\n\n");
         }
-        body.append("If a payment was made, a refund will be processed shortly.\n\n");
+        body.append("If a payment was made, your refund will be processed within 2 working days.\n");
+        body.append("Please log into your VetWorld account and navigate to My Orders to submit your bank details securely.\n\n");
         body.append("We apologize for any inconvenience. Please contact us if you have any questions.\n\n");
+        body.append("Best regards,\nVetWorld Team");
+
+        emailService.sendEmail(order.getUser().getEmail(), subject, body.toString());
+    }
+
+    // ── Internal: send refund email ────────────────────────────────
+    private void sendRefundEmail(Order order) {
+        String subject = "VetWorld — Refund Processed for Order #" + order.getOrderNumber();
+        StringBuilder body = new StringBuilder();
+        body.append("Dear ").append(order.getCustomerName()).append(",\n\n");
+        body.append("We have processed the refund for your cancelled order #").append(order.getOrderNumber()).append(".\n\n");
+        if (order.getRefundReceiptUrl() != null && !order.getRefundReceiptUrl().isBlank()) {
+            body.append("You can view the refund receipt here: ").append(order.getRefundReceiptUrl()).append("\n\n");
+        }
+        body.append("Depending on your bank, it may take an additional 1-3 working days for the funds to appear in your account.\n\n");
+        body.append("Best regards,\nVetWorld Team");
+
+        emailService.sendEmail(order.getUser().getEmail(), subject, body.toString());
+    }
+
+    // ── Internal: send slip rejection email ──────────────────────────────
+    private void sendSlipRejectionEmail(Order order, String reason) {
+        String subject = "VetWorld — Payment Slip Not Accepted #" + order.getOrderNumber();
+        StringBuilder body = new StringBuilder();
+        body.append("Dear ").append(order.getCustomerName()).append(",\n\n");
+        body.append("Unfortunately, your payment slip for order #").append(order.getOrderNumber())
+                .append(" could not be verified.\n\n");
+        if (reason != null && !reason.isBlank()) {
+            body.append("Reason: ").append(reason).append("\n\n");
+        }
+        body.append("Please log in to your VetWorld account, go to My Orders, and upload a clear image of your bank transfer receipt.\n\n");
         body.append("Best regards,\nVetWorld Team");
 
         emailService.sendEmail(order.getUser().getEmail(), subject, body.toString());

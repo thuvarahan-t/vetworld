@@ -24,8 +24,8 @@ export default function ImageUpload({
 
     const uploadToCloudinary = async (file: File) => {
         // Basic validation
-        if (!file.type.startsWith("image/")) {
-            setError("Please upload an image file");
+        if (!file.type.startsWith("image/") && file.type !== "application/pdf") {
+            setError("Please upload an image or PDF file");
             return;
         }
 
@@ -48,7 +48,7 @@ export default function ImageUpload({
                 throw new Error("Cloudinary configuration missing");
             }
 
-            const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
+            const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/auto/upload`, {
                 method: "POST",
                 body: formData,
             });
@@ -138,7 +138,14 @@ export default function ImageUpload({
 
             {value ? (
                 <div style={{ position: "relative", borderRadius: "var(--radius-md)", overflow: "hidden", border: "1px solid var(--border)", background: "var(--bg)", display: "flex", alignItems: "center", justifyContent: "center", minHeight: compact ? "96px" : "200px" }}>
-                    <img src={value} alt="Uploaded preview" style={{ maxWidth: "100%", maxHeight: compact ? "120px" : "300px", objectFit: "contain" }} />
+                    {value.toLowerCase().endsWith('.pdf') ? (
+                        <div style={{ padding: "1rem", textAlign: "center" }}>
+                            <div style={{ fontSize: "2rem", marginBottom: "0.5rem" }}>📄</div>
+                            <a href={value} target="_blank" rel="noopener noreferrer" style={{ color: "var(--vet-blue)", fontWeight: 600, textDecoration: "underline", fontSize: "0.9rem" }}>View PDF</a>
+                        </div>
+                    ) : (
+                        <img src={value} alt="Uploaded preview" style={{ maxWidth: "100%", maxHeight: compact ? "120px" : "300px", objectFit: "contain" }} />
+                    )}
 
                     <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.4)", display: "flex", alignItems: "center", justifyContent: "center", opacity: 0, transition: "opacity 0.2s ease" }}
                         onMouseEnter={e => e.currentTarget.style.opacity = "1"}
@@ -187,7 +194,7 @@ export default function ImageUpload({
                 >
                     <input
                         type="file"
-                        accept="image/*"
+                        accept="image/*,application/pdf"
                         onChange={handleFileChange}
                         disabled={isUploading}
                         style={{

@@ -1,57 +1,54 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import ImageUpload from "@/components/ui/ImageUpload";
+import { useAdminCategories, revalidateCategories } from "@/lib/adminHooks";
+import { authFetcher } from "@/lib/api";
 
-interface Category {
-    id: number;
-    name: string;
-    imageUrl: string;
+interface Category { id: number; name: string; imageUrl: string; }
+
+function TableSkeleton() {
+    return (
+        <>
+            {Array.from({ length: 5 }).map((_, i) => (
+                <tr key={i} style={{ borderBottom: "1px solid var(--border)" }}>
+                    {[40, 40, 160, 100].map((w, j) => (
+                        <td key={j} style={{ padding: "1rem" }}>
+                            <div style={{ height: j === 1 ? "40px" : "16px", width: j === 1 ? "40px" : `${w}px`, borderRadius: j === 1 ? "8px" : "6px", background: "var(--border)", animation: "pulse 1.5s ease-in-out infinite" }} />
+                        </td>
+                    ))}
+                </tr>
+            ))}
+        </>
+    );
 }
 
 export default function AdminCategoriesPage() {
-    const [categories, setCategories] = useState<Category[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
+    const { data: categories = [], error, isLoading, mutate } = useAdminCategories();
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [error, setError] = useState("");
     const [showForm, setShowForm] = useState(false);
     const [editingId, setEditingId] = useState<number | null>(null);
-
-    // Form state
     const [name, setName] = useState("");
     const [imageUrl, setImageUrl] = useState("");
 
-    const fetchCategories = async () => {
-        setIsLoading(true);
-        try {
-            const res = await fetch("/api/categories");
-            if (!res.ok) throw new Error("Failed to fetch categories");
-            const data = await res.json();
-            setCategories(data);
-        } catch (err: any) {
-            setError(err.message);
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    useEffect(() => {
-        fetchCategories();
+    const closeForm = useCallback(() => {
+        setShowForm(false);
+        setEditingId(null);
+        setName("");
+        setImageUrl("");
     }, []);
 
     const handleDelete = async (id: number) => {
         if (!confirm("Are you sure you want to delete this category?")) return;
+        // Optimistic remove
+        mutate(prev => (prev || []).filter(c => c.id !== id), { revalidate: false });
         try {
-            const token = localStorage.getItem("vetworld_token");
-            const res = await fetch(`/api/admin/categories/${id}`, {
-                method: "DELETE",
-                headers: { "Authorization": `Bearer ${token}` }
-            });
-            if (!res.ok) throw new Error("Failed to delete category");
-            setCategories(prev => prev.filter(c => c.id !== id));
+            await authFetcher(`/admin/categories/${id}`, { method: "DELETE" });
+            revalidateCategories();
         } catch (err: any) {
             alert(err.message);
+            revalidateCategories(); // restore on error
         }
     };
 
@@ -59,30 +56,21 @@ export default function AdminCategoriesPage() {
         e.preventDefault();
         setIsSubmitting(true);
         try {
-            const token = localStorage.getItem("vetworld_token");
             const isEditing = editingId !== null;
-            const url = isEditing
-                ? `/api/admin/categories/${editingId}`
-                : "/api/admin/categories";
+            const endpoint = isEditing ? `/admin/categories/${editingId}` : "/admin/categories";
             const method = isEditing ? "PUT" : "POST";
-
-            const res = await fetch(url, {
+            const saved = await authFetcher<Category>(endpoint, {
                 method,
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${token}`
-                },
-                body: JSON.stringify({ name, imageUrl })
+                body: JSON.stringify({ name, imageUrl }),
             });
-            if (!res.ok) throw new Error(`Failed to ${isEditing ? "update" : "create"} category`);
-            const savedCat = await res.json();
 
             if (isEditing) {
-                setCategories(prev => prev.map(c => c.id === editingId ? savedCat : c));
+                mutate(prev => (prev || []).map(c => c.id === editingId ? saved : c), { revalidate: false });
             } else {
-                setCategories([...categories, savedCat]);
+                mutate(prev => [...(prev || []), saved], { revalidate: false });
             }
             closeForm();
+            revalidateCategories();
         } catch (err: any) {
             alert(err.message);
         } finally {
@@ -97,143 +85,90 @@ export default function AdminCategoriesPage() {
         setShowForm(true);
     };
 
-    const closeForm = () => {
-        setShowForm(false);
-        setEditingId(null);
-        setName("");
-        setImageUrl("");
-    };
-
     return (
         <div style={{ paddingBottom: "3rem" }}>
+            <style>{`@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}`}</style>
+
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "2rem" }}>
                 <div>
                     <h1 style={{ fontSize: "2rem", fontWeight: 800, color: "var(--text-primary)" }}>Categories</h1>
                     <p style={{ color: "var(--text-secondary)" }}>Manage product categories</p>
                 </div>
-                <button
-                    onClick={() => { closeForm(); setShowForm(true); }}
-                    className="btn-primary"
-                    style={{ padding: "0.6rem 1.2rem", display: "flex", gap: "0.5rem", alignItems: "center" }}
-                >
+                <button onClick={() => { closeForm(); setShowForm(true); }} className="btn-primary"
+                    style={{ padding: "0.6rem 1.2rem", display: "flex", gap: "0.5rem", alignItems: "center" }}>
                     <span style={{ fontSize: "1.2rem" }}>+</span> Add Category
                 </button>
             </div>
 
-            {/* Error Message */}
-            {error && <div style={{ color: "rgb(239, 68, 68)", padding: "1rem", background: "rgba(239, 68, 68, 0.1)", borderRadius: "var(--radius-md)", marginBottom: "1.5rem" }}>Error: {error}</div>}
-
-            {/* Loading State */}
-            {isLoading ? (
-                <div style={{ color: "var(--text-secondary)" }}>Loading categories...</div>
-            ) : (
-                <div style={{
-                    background: "var(--surface)",
-                    borderRadius: "var(--radius-lg)",
-                    border: "1px solid var(--border)",
-                    boxShadow: "var(--shadow-sm)",
-                    overflow: "hidden"
-                }}>
-                    <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left" }}>
-                        <thead>
-                            <tr style={{ background: "var(--bg)", borderBottom: "1px solid var(--border)" }}>
-                                <th style={{ padding: "1rem", fontWeight: 600, color: "var(--text-secondary)", fontSize: "0.85rem", textTransform: "uppercase", letterSpacing: "0.5px" }}>ID</th>
-                                <th style={{ padding: "1rem", fontWeight: 600, color: "var(--text-secondary)", fontSize: "0.85rem", textTransform: "uppercase", letterSpacing: "0.5px" }}>Image</th>
-                                <th style={{ padding: "1rem", fontWeight: 600, color: "var(--text-secondary)", fontSize: "0.85rem", textTransform: "uppercase", letterSpacing: "0.5px" }}>Name</th>
-                                <th style={{ padding: "1rem", fontWeight: 600, color: "var(--text-secondary)", fontSize: "0.85rem", textTransform: "uppercase", letterSpacing: "0.5px", textAlign: "right" }}>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {categories.map((cat) => (
-                                <tr key={cat.id} style={{ borderBottom: "1px solid var(--border)" }}>
-                                    <td style={{ padding: "1rem", color: "var(--text-secondary)", fontSize: "0.95rem" }}>#{cat.id}</td>
-                                    <td style={{ padding: "1rem" }}>
-                                        <div style={{ width: "40px", height: "40px", borderRadius: "8px", background: "var(--bg)", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                                            {cat.imageUrl ? (
-                                                <img src={cat.imageUrl} alt={cat.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                                            ) : (
-                                                <span style={{ fontSize: "1.2rem" }}>📁</span>
-                                            )}
-                                        </div>
-                                    </td>
-                                    <td style={{ padding: "1rem", fontWeight: 600, color: "var(--text-primary)" }}>{cat.name}</td>
-                                    <td style={{ padding: "1rem", textAlign: "right" }}>
-                                        <div style={{ display: "flex", gap: "0.5rem", justifyContent: "flex-end" }}>
-                                            <button
-                                                onClick={() => handleEdit(cat)}
-                                                style={{
-                                                    background: "var(--bg)", color: "var(--vet-blue)", border: "1px solid var(--border)",
-                                                    padding: "0.4rem 0.8rem", borderRadius: "var(--radius-sm)", fontSize: "0.85rem", fontWeight: 600,
-                                                    cursor: "pointer", transition: "all var(--transition)"
-                                                }}
-                                            >
-                                                Edit
-                                            </button>
-                                            <button
-                                                onClick={() => handleDelete(cat.id)}
-                                                style={{
-                                                    background: "rgba(239, 68, 68, 0.1)", color: "rgb(239, 68, 68)",
-                                                    border: "none", padding: "0.4rem 0.8rem", borderRadius: "var(--radius-sm)",
-                                                    fontSize: "0.85rem", fontWeight: 600, cursor: "pointer",
-                                                    transition: "all var(--transition)"
-                                                }}
-                                                onMouseEnter={e => { e.currentTarget.style.background = "rgb(239, 68, 68)"; e.currentTarget.style.color = "#fff"; }}
-                                                onMouseLeave={e => { e.currentTarget.style.background = "rgba(239, 68, 68, 0.1)"; e.currentTarget.style.color = "rgb(239, 68, 68)"; }}
-                                            >
-                                                Delete
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            ))}
-                            {categories.length === 0 && (
-                                <tr>
-                                    <td colSpan={4} style={{ padding: "2rem", textAlign: "center", color: "var(--text-secondary)" }}>
-                                        No categories found. Click 'Add Category' to create one.
-                                    </td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
+            {error && (
+                <div style={{ color: "rgb(239, 68, 68)", padding: "1rem", background: "rgba(239, 68, 68, 0.1)", borderRadius: "var(--radius-md)", marginBottom: "1.5rem" }}>
+                    ⚠ {error.message}
                 </div>
             )}
 
-            {/* Add Category Modal */}
+            <div style={{ background: "var(--surface)", borderRadius: "var(--radius-lg)", border: "1px solid var(--border)", boxShadow: "var(--shadow-sm)", overflow: "hidden" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left" }}>
+                    <thead>
+                        <tr style={{ background: "var(--bg)", borderBottom: "1px solid var(--border)" }}>
+                            {["ID", "Image", "Name", "Actions"].map((h, i) => (
+                                <th key={h} style={{ padding: "1rem", fontWeight: 600, color: "var(--text-secondary)", fontSize: "0.85rem", textTransform: "uppercase", letterSpacing: "0.5px", textAlign: i === 3 ? "right" : "left" }}>{h}</th>
+                            ))}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {isLoading ? <TableSkeleton /> : categories.map(cat => (
+                            <tr key={cat.id} style={{ borderBottom: "1px solid var(--border)" }}>
+                                <td style={{ padding: "1rem", color: "var(--text-secondary)", fontSize: "0.95rem" }}>#{cat.id}</td>
+                                <td style={{ padding: "1rem" }}>
+                                    <div style={{ width: "40px", height: "40px", borderRadius: "8px", background: "var(--bg)", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                                        {cat.imageUrl ? (
+                                            <img src={cat.imageUrl} alt={cat.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                                        ) : (
+                                            <span style={{ fontSize: "1.2rem" }}>📁</span>
+                                        )}
+                                    </div>
+                                </td>
+                                <td style={{ padding: "1rem", fontWeight: 600, color: "var(--text-primary)" }}>{cat.name}</td>
+                                <td style={{ padding: "1rem", textAlign: "right" }}>
+                                    <div style={{ display: "flex", gap: "0.5rem", justifyContent: "flex-end" }}>
+                                        <button onClick={() => handleEdit(cat)}
+                                            style={{ background: "var(--bg)", color: "var(--vet-blue)", border: "1px solid var(--border)", padding: "0.4rem 0.8rem", borderRadius: "var(--radius-sm)", fontSize: "0.85rem", fontWeight: 600, cursor: "pointer" }}>
+                                            Edit
+                                        </button>
+                                        <button onClick={() => handleDelete(cat.id)}
+                                            style={{ background: "rgba(239, 68, 68, 0.1)", color: "rgb(239, 68, 68)", border: "none", padding: "0.4rem 0.8rem", borderRadius: "var(--radius-sm)", fontSize: "0.85rem", fontWeight: 600, cursor: "pointer" }}>
+                                            Delete
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        ))}
+                        {!isLoading && categories.length === 0 && (
+                            <tr><td colSpan={4} style={{ padding: "2rem", textAlign: "center", color: "var(--text-secondary)" }}>No categories found. Click 'Add Category' to create one.</td></tr>
+                        )}
+                    </tbody>
+                </table>
+            </div>
+
+            {/* Modal */}
             <AnimatePresence>
                 {showForm && (
                     <>
-                        <motion.div
-                            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                             onClick={closeForm}
-                            style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)", zIndex: 300 }}
-                        />
+                            style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)", zIndex: 300 }} />
                         <div style={{ position: "fixed", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 301, pointerEvents: "none" }}>
-                            <motion.div
-                                initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                                animate={{ opacity: 1, scale: 1, y: 0 }}
-                                exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                                style={{
-                                    background: "var(--surface)", borderRadius: "var(--radius-lg)", padding: "2rem",
-                                    width: "min(400px, 90vw)", pointerEvents: "all", boxShadow: "var(--shadow-lg)"
-                                }}
-                            >
+                            <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                                style={{ background: "var(--surface)", borderRadius: "var(--radius-lg)", padding: "2rem", width: "min(400px, 90vw)", pointerEvents: "all", boxShadow: "var(--shadow-lg)" }}>
                                 <h2 style={{ marginBottom: "1.5rem", fontSize: "1.5rem" }}>{editingId ? "Edit Category" : "Add Category"}</h2>
                                 <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "1.2rem" }}>
                                     <div>
                                         <label style={{ display: "block", fontSize: "0.85rem", fontWeight: 600, color: "var(--text-secondary)", marginBottom: "0.4rem" }}>Category Name</label>
-                                        <input
-                                            type="text" required value={name} onChange={e => setName(e.target.value)}
+                                        <input type="text" required value={name} onChange={e => setName(e.target.value)}
                                             style={{ width: "100%", padding: "0.75rem", borderRadius: "var(--radius-sm)", border: "1px solid var(--border)", background: "var(--bg)", color: "var(--text-primary)" }}
-                                            placeholder="e.g., Dog Food"
-                                        />
+                                            placeholder="e.g., Dog Food" />
                                     </div>
-                                    <div>
-                                        <ImageUpload
-                                            label="Category Image (Optional)"
-                                            value={imageUrl}
-                                            onUpload={(url: string) => setImageUrl(url)}
-                                        />
-                                    </div>
+                                    <ImageUpload label="Category Image (Optional)" value={imageUrl} onUpload={(url: string) => setImageUrl(url)} />
                                     <div style={{ display: "flex", gap: "0.75rem", marginTop: "0.5rem" }}>
                                         <button type="button" onClick={closeForm} style={{ flex: 1, padding: "0.75rem", borderRadius: "var(--radius-sm)", border: "1px solid var(--border)", background: "transparent", cursor: "pointer", fontWeight: 600 }}>Cancel</button>
                                         <button type="submit" disabled={isSubmitting} className="btn-primary" style={{ flex: 1, padding: "0.75rem", justifyContent: "center", opacity: isSubmitting ? 0.7 : 1 }}>
