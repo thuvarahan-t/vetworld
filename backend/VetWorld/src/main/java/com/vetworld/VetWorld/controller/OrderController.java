@@ -80,6 +80,15 @@ public class OrderController {
             String secretMd5 = md5(merchantSecret).toUpperCase();
             String hashInput = merchantId + order.getOrderNumber() + amountFormatted + currency + secretMd5;
             String hash = md5(hashInput).toUpperCase();
+            System.err.println("=== PAYHERE HASH DEBUG ===");
+            System.err.println("merchant_id   : [" + merchantId + "]");
+            System.err.println("order_id      : [" + order.getOrderNumber() + "]");
+            System.err.println("amount        : [" + amountFormatted + "]");
+            System.err.println("currency      : [" + currency + "]");
+            System.err.println("secret_md5    : [" + secretMd5 + "]");
+            System.err.println("hash_input    : [" + hashInput + "]");
+            System.err.println("final_hash    : [" + hash + "]");
+            System.err.println("=========================");
 
             return ResponseEntity.ok(Map.of(
                     "orderId", order.getId(),
