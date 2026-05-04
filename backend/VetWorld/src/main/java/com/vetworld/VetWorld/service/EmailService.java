@@ -24,30 +24,21 @@ public class EmailService {
 
     private final HttpClient httpClient = HttpClient.newHttpClient();
 
-    /**
-     * Send an email via Resend API.
-     * Returns true if sent successfully, false otherwise.
-     */
     public boolean sendEmail(String to, String subject, String text) {
         if (resendApiKey == null || resendApiKey.isBlank()) {
-            System.err.println("❌ RESEND_API_KEY is not configured. Email not sent to: " + to);
+            System.err.println("❌ RESEND_API_KEY not configured. Email not sent to: " + to);
             return false;
         }
-
-        // Escape special characters for JSON
-        String safeText = text
-                .replace("\\", "\\\\")
-                .replace("\"", "\\\"")
-                .replace("\n", "\\n")
-                .replace("\r", "\\r")
-                .replace("\t", "\\t");
-
-        String jsonBody = String.format(
-                "{\"from\":\"%s\",\"to\":[\"%s\"],\"subject\":\"%s\",\"text\":\"%s\"}",
-                fromEmail, to, subject, safeText
-        );
-
         try {
+            com.fasterxml.jackson.databind.ObjectMapper mapper =
+                new com.fasterxml.jackson.databind.ObjectMapper();
+            java.util.Map<String, Object> payload = new java.util.LinkedHashMap<>();
+            payload.put("from", fromEmail);
+            payload.put("to", java.util.List.of(to));
+            payload.put("subject", subject);
+            payload.put("text", text);
+            String jsonBody = mapper.writeValueAsString(payload);
+
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create("https://api.resend.com/emails"))
                     .header("Authorization", "Bearer " + resendApiKey)
@@ -55,13 +46,14 @@ public class EmailService {
                     .POST(HttpRequest.BodyPublishers.ofString(jsonBody))
                     .build();
 
-            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-
+            HttpResponse<String> response = httpClient.send(request,
+                                              HttpResponse.BodyHandlers.ofString());
             if (response.statusCode() == 200 || response.statusCode() == 201) {
                 System.out.println("✅ Email sent via Resend to: " + to);
                 return true;
             } else {
-                System.err.println("❌ Resend API error " + response.statusCode() + ": " + response.body());
+                System.err.println("❌ Resend API error " + response.statusCode()
+                                   + ": " + response.body());
                 return false;
             }
         } catch (Exception e) {

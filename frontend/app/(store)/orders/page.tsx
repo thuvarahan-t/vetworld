@@ -10,14 +10,16 @@ import Link from "next/link";
 // ─── Status helpers ────────────────────────────────────────────────────────
 function statusColor(status: string): { bg: string; text: string } {
     switch (status) {
-        case "PENDING_PAYMENT":  return { bg: "#fff3e0", text: "#c2410c" };
-        case "PAYMENT_REVIEW":   return { bg: "#eff6ff", text: "#1d4ed8" };
-        case "CONFIRMED":        return { bg: "#ecfdf5", text: "#065f46" };
-        case "PROCESSING":       return { bg: "#f0fdf4", text: "#15803d" };
-        case "PACKED":           return { bg: "#ede9fe", text: "#6d28d9" };
-        case "DELIVERED":        return { bg: "#dcfce7", text: "#166534" };
-        case "CANCELLED":        return { bg: "#fee2e2", text: "#991b1b" };
-        default:                 return { bg: "#f1f5f9", text: "#475569" };
+        case "PENDING_PAYMENT":   return { bg: "#fff3e0", text: "#c2410c" };
+        case "PAYMENT_FAILED":    return { bg: "#fee2e2", text: "#991b1b" };
+        case "PAYMENT_CANCELLED": return { bg: "#fef3c7", text: "#92400e" };
+        case "PAYMENT_REVIEW":    return { bg: "#eff6ff", text: "#1d4ed8" };
+        case "CONFIRMED":         return { bg: "#ecfdf5", text: "#065f46" };
+        case "PROCESSING":        return { bg: "#f0fdf4", text: "#15803d" };
+        case "PACKED":            return { bg: "#ede9fe", text: "#6d28d9" };
+        case "DELIVERED":         return { bg: "#dcfce7", text: "#166534" };
+        case "CANCELLED":         return { bg: "#fee2e2", text: "#991b1b" };
+        default:                  return { bg: "#f1f5f9", text: "#475569" };
     }
 }
 function statusLabel(status: string) {
@@ -237,13 +239,42 @@ export default function MyOrdersPage() {
     };
 
     useEffect(() => {
-        const token = typeof window !== "undefined" ? localStorage.getItem("vetworld_token") : null;
+        const token = typeof window !== "undefined"
+                        ? localStorage.getItem("vetworld_token") : null;
         if (!token) { router.push("/"); return; }
+
+        let pollTimer: ReturnType<typeof setInterval> | null = null;
+        let pollCount = 0;
+        const MAX_POLLS = 12; // 12 × 8s = 96s max
 
         const fetchOrders = async () => {
             try {
                 const data = await userApi.getMyOrders();
                 setOrders(data as Order[]);
+
+                const hasPending = (data as Order[]).some(
+                    (o) => o.status === "PENDING_PAYMENT"
+                );
+                if (hasPending && pollCount < MAX_POLLS) {
+                    if (!pollTimer) {
+                        pollTimer = setInterval(async () => {
+                            pollCount++;
+                            try {
+                                const fresh = await userApi.getMyOrders();
+                                setOrders(fresh as Order[]);
+                                const stillPending = (fresh as Order[]).some(
+                                    (o) => o.status === "PENDING_PAYMENT"
+                                );
+                                if (!stillPending || pollCount >= MAX_POLLS) {
+                                    if (pollTimer) {
+                                        clearInterval(pollTimer);
+                                        pollTimer = null;
+                                    }
+                                }
+                            } catch { /* ignore poll errors silently */ }
+                        }, 8000);
+                    }
+                }
             } catch (err: unknown) {
                 if (err instanceof Error) {
                     setError("Unable to load your orders. Please try again.");
@@ -252,7 +283,9 @@ export default function MyOrdersPage() {
                 setIsLoading(false);
             }
         };
+
         fetchOrders();
+        return () => { if (pollTimer) clearInterval(pollTimer); };
     }, [router]);
 
     const handleDownloadReceipt = async (orderId: number) => {

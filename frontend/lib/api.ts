@@ -69,8 +69,9 @@ export async function fetcher<T>(endpoint: string, options?: RequestInit): Promi
         if (typeof window !== "undefined" && (res.status === 401 || res.status === 403)) {
             localStorage.removeItem("vetworld_token");
             localStorage.removeItem("vetworld_user");
-            window.location.href = "/";
-            throw new Error("Session expired or access denied. Please login again as admin.");
+            const isAdminPage = window.location.pathname.startsWith("/admin");
+            window.location.href = isAdminPage ? "/admin" : "/";
+            throw new Error("Session expired. Please log in again.");
         }
 
         throw new Error(`API error [${res.status}]: ${error}`);

@@ -7,6 +7,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigInteger;
+import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.Map;
 
@@ -48,17 +49,47 @@ public class PayHereWebhookController {
             return ResponseEntity.ok("INVALID_SIGNATURE"); // always return 200 to PayHere
         }
 
-        // 2. statusCode 2 = success
-        if ("2".equals(statusCode)) {
-            try {
-                orderService.confirmPayment(orderId, payherePaymentId);
-                System.out.println("✅ Payment confirmed for order: " + orderId);
-            } catch (Exception e) {
-                System.err.println("❌ Failed to confirm order " + orderId + ": " + e.getMessage());
-            }
-        } else {
-            // statusCode 0=pending, -1=cancelled, -2=failed, -3=chargebacked
-            System.out.println("ℹ️ PayHere notification for order " + orderId + " with status: " + statusCode);
+        // 2. Handle all PayHere status codes
+        switch (statusCode) {
+            case "2":
+                // Payment successful
+                try {
+                    orderService.confirmPayment(orderId, payherePaymentId);
+                    System.out.println("✅ Payment confirmed for order: " + orderId);
+                } catch (Exception e) {
+                    System.err.println("❌ Failed to confirm order " + orderId + ": " + e.getMessage());
+                }
+                break;
+            case "0":
+                System.out.println("⏳ PayHere payment pending for order: " + orderId);
+                // status stays PENDING_PAYMENT — no action needed
+                break;
+            case "-1":
+                try {
+                    orderService.markPaymentFailed(orderId, "CANCELLED");
+                    System.out.println("🚫 Payment cancelled for order: " + orderId);
+                } catch (Exception e) {
+                    System.err.println("❌ Failed to mark cancelled: " + orderId + ": " + e.getMessage());
+                }
+                break;
+            case "-2":
+                try {
+                    orderService.markPaymentFailed(orderId, "FAILED");
+                    System.out.println("❌ Payment failed for order: " + orderId);
+                } catch (Exception e) {
+                    System.err.println("❌ Failed to mark failed: " + orderId + ": " + e.getMessage());
+                }
+                break;
+            case "-3":
+                try {
+                    orderService.markPaymentFailed(orderId, "CHARGEBACK");
+                    System.out.println("🔄 Chargeback for order: " + orderId);
+                } catch (Exception e) {
+                    System.err.println("❌ Failed to mark chargeback: " + orderId + ": " + e.getMessage());
+                }
+                break;
+            default:
+                System.out.println("ℹ️ Unknown PayHere status " + statusCode + " for order: " + orderId);
         }
 
         return ResponseEntity.ok("OK");
@@ -75,7 +106,7 @@ public class PayHereWebhookController {
     private String md5(String input) {
         try {
             MessageDigest md = MessageDigest.getInstance("MD5");
-            byte[] digest = md.digest(input.getBytes());
+            byte[] digest = md.digest(input.getBytes(StandardCharsets.UTF_8));
             BigInteger no = new BigInteger(1, digest);
             String hash = no.toString(16);
             while (hash.length() < 32) hash = "0" + hash;

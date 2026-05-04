@@ -14,6 +14,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
@@ -27,8 +28,11 @@ public class OrderService {
     // ── Generate unique order number ─────────────────────────────────────
     private String generateOrderNumber() {
         String year = String.valueOf(LocalDateTime.now().getYear());
-        long count = orderRepository.count() + 1;
-        return String.format("VW-%s-%05d", year, count);
+        String uid = UUID.randomUUID().toString()
+                         .replace("-", "")
+                         .substring(0, 8)
+                         .toUpperCase();
+        return "VW-" + year + "-" + uid;
     }
 
     // ── Place Order (status = PENDING_PAYMENT) ────────────────────────────
@@ -81,7 +85,27 @@ public class OrderService {
             order.setPayherePaymentId(payherePaymentId);
             orderRepository.save(order);
             sendConfirmationEmail(order);
+        } else {
+            System.out.println("ℹ️ Webhook received for already-processed order: " + orderNumber
+                               + " (status: " + order.getStatus() + ")");
         }
+    }
+
+    // ── Mark Payment Failed / Cancelled (called by PayHere webhook) ───────
+    @Transactional
+    public void markPaymentFailed(String orderNumber, String reason) {
+        orderRepository.findByOrderNumber(orderNumber).ifPresentOrElse(order -> {
+            if (order.getStatus() == OrderStatus.PENDING_PAYMENT) {
+                OrderStatus newStatus = switch (reason) {
+                    case "CANCELLED"  -> OrderStatus.PAYMENT_CANCELLED;
+                    case "CHARGEBACK" -> OrderStatus.PAYMENT_FAILED;
+                    default           -> OrderStatus.PAYMENT_FAILED;
+                };
+                order.setStatus(newStatus);
+                orderRepository.save(order);
+                System.out.println("✅ Order " + orderNumber + " marked as " + newStatus);
+            }
+        }, () -> System.err.println("❌ markPaymentFailed: order not found: " + orderNumber));
     }
 
     // ── User: Submit payment slip ─────────────────────────────────────────

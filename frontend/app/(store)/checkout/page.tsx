@@ -156,7 +156,7 @@ export default function CheckoutPage() {
             setPhone(user.phone || "");
             setAddress(user.address || "");
         } catch { router.push("/"); }
-        if (items.length === 0 && step !== 3) router.push("/cart");
+        if (items.length === 0 && step !== 3 && !placedOrderNumber) router.push("/cart");
     }, [router, items.length, step]);
 
     const buildPayload = () => ({
@@ -182,16 +182,22 @@ export default function CheckoutPage() {
 
     // Pay via PayHere
     const handlePayHere = async () => {
+        if (typeof window === "undefined" || !window.payhere) {
+            setError("Payment system is still loading. Please wait a moment and try again.");
+            setIsLoading(false);
+            return;
+        }
         if (!isAuthenticated) return;
         setIsLoading(true); setError("");
         try {
             const payhereInit = await userApi.placeOrder(buildPayload());
             const payhereConfig = {
-                sandbox: true,
+                sandbox: process.env.NEXT_PUBLIC_PAYHERE_SANDBOX !== "false",
                 merchant_id: payhereInit.merchantId,
                 return_url: `${window.location.origin}/orders`,
                 cancel_url: `${window.location.origin}/checkout`,
-                notify_url: `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"}/api/payments/notify`,
+                notify_url: process.env.NEXT_PUBLIC_PAYHERE_NOTIFY_URL
+                    || `${process.env.NEXT_PUBLIC_API_URL}/api/payments/notify`,
                 order_id: payhereInit.orderNumber,
                 items: "VetWorld Order " + payhereInit.orderNumber,
                 amount: payhereInit.totalAmount,
@@ -202,12 +208,15 @@ export default function CheckoutPage() {
                 email: JSON.parse(localStorage.getItem("vetworld_user") || "{}").email || "",
                 phone, address, city: "Sri Lanka", country: "Sri Lanka",
             };
-            window.payhere.onCompleted = () => {
+            window.payhere.onCompleted = (orderId: string) => {
+                console.log("PayHere onCompleted for:", orderId);
                 setPlacedOrderId(payhereInit.orderId);
                 setPlacedOrderNumber(payhereInit.orderNumber);
                 setSuccessMode("PAYHERE");
                 clearCart();
                 setStep(3);
+                // NOTE: step 3 now shows "Processing..." until the webhook confirms.
+                // The orders/page.tsx polling will update the status display there.
             };
             window.payhere.onDismissed = () => { setIsLoading(false); setError("Payment was cancelled. You can try again."); };
             window.payhere.onError = (msg: string) => { setIsLoading(false); setError("Payment error: " + msg); };
@@ -392,10 +401,10 @@ export default function CheckoutPage() {
                                 {/* Bank details box */}
                                 <div style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: "var(--radius-sm)", padding: "0.9rem 1rem", marginBottom: "1rem", fontSize: "0.85rem" }}>
                                     <div style={{ fontWeight: 700, color: "var(--vet-green)", marginBottom: "0.4rem" }}>🏦 VetWorld Bank Account</div>
-                                    <div><strong>Bank:</strong> Commercial Bank of Ceylon</div>
-                                    <div><strong>Account Name:</strong> VetWorld (Pvt) Ltd</div>
-                                    <div><strong>Account No:</strong> 1234 5678 9012</div>
-                                    <div><strong>Branch:</strong> Colombo Main</div>
+                                    <div><strong>Bank:</strong> {process.env.NEXT_PUBLIC_BANK_NAME || "Commercial Bank of Ceylon"}</div>
+                                    <div><strong>Account Name:</strong> {process.env.NEXT_PUBLIC_BANK_ACCOUNT_NAME || "VetWorld (Pvt) Ltd"}</div>
+                                    <div><strong>Account No:</strong> {process.env.NEXT_PUBLIC_BANK_ACCOUNT_NO || "1234 5678 9012"}</div>
+                                    <div><strong>Branch:</strong> {process.env.NEXT_PUBLIC_BANK_BRANCH || "Colombo Main"}</div>
                                     <div style={{ marginTop: "0.4rem", color: "var(--text-secondary)" }}>Reference: Your phone number</div>
                                 </div>
 
@@ -440,9 +449,9 @@ export default function CheckoutPage() {
                         {successMode === "PAYHERE" ? (
                             <>
                                 <div style={{ width: 80, height: 80, background: "var(--vet-green-light)", color: "var(--vet-green)", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "2.5rem", margin: "0 auto 1.5rem" }}>✓</div>
-                                <h2 style={{ fontSize: "1.75rem", fontWeight: 800, marginBottom: "0.5rem" }}>Order Confirmed! 🎉</h2>
+                                <h2 style={{ fontSize: "1.75rem", fontWeight: 800, marginBottom: "0.5rem" }}>Payment Submitted! 🎉</h2>
                                 <p style={{ color: "var(--text-secondary)", marginBottom: "2rem" }}>
-                                    Payment received. We've sent a confirmation email to you.
+                                    Payment submitted! Your order is being confirmed — this usually takes under a minute. You&apos;ll receive a confirmation email shortly.
                                 </p>
                             </>
                         ) : (
@@ -475,7 +484,7 @@ export default function CheckoutPage() {
                 )}
             </AnimatePresence>
 
-            <Script src="https://www.payhere.lk/lib/payhere.js" strategy="lazyOnload" />
+            <Script src="https://www.payhere.lk/lib/payhere.js" strategy="afterInteractive" />
         </main>
     );
 }
