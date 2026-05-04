@@ -81,6 +81,9 @@ public class OrderController {
             String hashInput = merchantId + order.getOrderNumber() + amountFormatted + currency + secretMd5;
             String hash = md5(hashInput).toUpperCase();
             System.err.println("=== PAYHERE HASH DEBUG ===");
+            System.err.println("merchant_secret_raw   : [" + merchantSecret + "]");
+            System.err.println("merchant_secret_len   : [" + merchantSecret.length() + "]");
+            System.err.println("merchant_secret_bytes : [" + java.util.Base64.getEncoder().encodeToString(merchantSecret.getBytes(StandardCharsets.UTF_8)) + "]");
             System.err.println("merchant_id   : [" + merchantId + "]");
             System.err.println("order_id      : [" + order.getOrderNumber() + "]");
             System.err.println("amount        : [" + amountFormatted + "]");
