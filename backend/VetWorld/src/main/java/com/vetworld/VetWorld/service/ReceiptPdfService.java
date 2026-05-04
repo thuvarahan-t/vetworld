@@ -8,7 +8,6 @@ import com.itextpdf.kernel.pdf.PdfDocument;
 import com.itextpdf.kernel.pdf.PdfWriter;
 import com.itextpdf.layout.Document;
 import com.itextpdf.layout.borders.Border;
-import com.itextpdf.layout.borders.SolidBorder;
 import com.itextpdf.layout.element.*;
 import com.itextpdf.layout.properties.TextAlignment;
 import com.itextpdf.layout.properties.UnitValue;
@@ -26,7 +25,6 @@ public class ReceiptPdfService {
     private static final DeviceRgb VET_BLUE = new DeviceRgb(26, 115, 232);
     private static final DeviceRgb VET_BLUE_LIGHT = new DeviceRgb(232, 240, 254);
     private static final DeviceRgb GREY_TEXT = new DeviceRgb(71, 85, 105);
-    private static final DeviceRgb LIGHT_BORDER = new DeviceRgb(226, 232, 240);
     private static final DeviceRgb GREEN = new DeviceRgb(13, 158, 110);
     private static final DeviceRgb RED = new DeviceRgb(239, 68, 68);
 
@@ -77,14 +75,16 @@ public class ReceiptPdfService {
             default -> GREY_TEXT;
         };
         String statusLabel = switch (order.getStatus()) {
-            case PENDING_PAYMENT -> "PAYMENT PENDING";
-            case PAYMENT_REVIEW -> "⏳ AWAITING PAYMENT REVIEW";
-            case CONFIRMED -> "✓ ORDER CONFIRMED";
-            case PROCESSING -> "⚙ PROCESSING";
-            case PACKED -> "📦 PACKED";
-            case DELIVERED -> "✓ DELIVERED";
-            case CANCELLED -> "✕ CANCELLED";
-            case REFUNDED -> "✓ REFUNDED";
+            case PENDING_PAYMENT   -> "PAYMENT PENDING";
+            case PAYMENT_FAILED    -> "✕ PAYMENT FAILED";
+            case PAYMENT_CANCELLED -> "✕ PAYMENT CANCELLED";
+            case PAYMENT_REVIEW    -> "⏳ AWAITING PAYMENT REVIEW";
+            case CONFIRMED         -> "✓ ORDER CONFIRMED";
+            case PROCESSING        -> "⚙ PROCESSING";
+            case PACKED            -> "📦 PACKED";
+            case DELIVERED         -> "✓ DELIVERED";
+            case CANCELLED         -> "✕ CANCELLED";
+            case REFUNDED          -> "✓ REFUNDED";
         };
         document.add(new Paragraph(statusLabel)
                 .setFont(boldFont).setFontSize(11).setFontColor(statusColor)

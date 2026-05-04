@@ -18,9 +18,12 @@ import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.text.DecimalFormat;
+import java.text.DecimalFormatSymbols;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 @RestController
@@ -49,7 +52,7 @@ public class OrderController {
     private String md5(String input) {
         try {
             MessageDigest md = MessageDigest.getInstance("MD5");
-            byte[] digest = md.digest(input.getBytes());
+            byte[] digest = md.digest(input.getBytes(StandardCharsets.UTF_8));
             BigInteger no = new BigInteger(1, digest);
             String hash = no.toString(16);
             while (hash.length() < 32) hash = "0" + hash;
@@ -69,7 +72,8 @@ public class OrderController {
             Order order = orderService.createPendingOrder(user, req);
 
             // Build PayHere hash server-side (NEVER expose merchant secret to frontend)
-            DecimalFormat df = new DecimalFormat("0.00");
+            // Use Locale.US to guarantee '.' as decimal separator regardless of JVM locale
+            DecimalFormat df = new DecimalFormat("0.00", new DecimalFormatSymbols(Locale.US));
             String amountFormatted = df.format(order.getTotalAmount());
             String currency = "LKR";
 

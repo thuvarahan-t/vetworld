@@ -18,22 +18,9 @@ interface Props {
 
 type View = "login" | "signup" | "signup-otp" | "forgot" | "reset";
 
-// Style tokens for consistent modal look
 const labelStyle: React.CSSProperties = {
     display: "block", fontSize: "0.8rem", fontWeight: 600,
     color: "var(--text-secondary)", marginBottom: "0.3rem",
-};
-
-const inputStyle: React.CSSProperties = {
-    width: "100%",
-    padding: "0.6rem 0.9rem",
-    border: "1.5px solid var(--border)",
-    borderRadius: "var(--radius-sm)",
-    fontSize: "0.9rem",
-    color: "var(--text-primary)",
-    background: "var(--surface)",
-    outline: "none",
-    transition: "border var(--transition), box-shadow var(--transition)",
 };
 
 function ErrorBox({ msg }: { msg: string }) {
@@ -309,7 +296,7 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }: Props) {
                                                 placeholder="Street, City, State..." /></div>
                                         <div><label style={labelStyle}>Password</label>
                                             <div style={{ position: "relative" }}>
-                                                <input type={showPassword ? "text" : "password"} required value={password} onChange={e => setPassword(e.target.value)} className="input" style={{ paddingRight: "2.5rem" }} placeholder="••••••••" />
+                                                <input type={showPassword ? "text" : "password"} required minLength={6} value={password} onChange={e => setPassword(e.target.value)} className="input" style={{ paddingRight: "2.5rem" }} placeholder="Min 6 characters" />
                                                 <button type="button" onClick={() => setShowPassword(!showPassword)} style={{ position: "absolute", right: "0.75rem", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", color: "var(--text-muted)" }}>
                                                     {showPassword ? <EyeOffIcon /> : <EyeIcon />}
                                                 </button>
@@ -318,7 +305,7 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }: Props) {
                                         {errorMsg && <ErrorBox msg={errorMsg} />}
                                         <button type="submit" disabled={isLoading} className="btn-primary"
                                             style={{ width: "100%", justifyContent: "center", padding: "0.85rem", opacity: isLoading ? 0.7 : 1 }}>
-                                            {isLoading ? "Please wait..." : "Create Account"}
+                                            {isLoading ? "Please wait..." : "Send Verification Code"}
                                         </button>
                                     </form>
                                 </>
@@ -327,7 +314,7 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }: Props) {
                             {/* ── SIGNUP OTP VERIFY ── */}
                             {view === "signup-otp" && (
                                 <>
-                                    <button type="button" onClick={() => goTo("signup")} style={{
+                                    <button type="button" onClick={() => { setErrorMsg(""); setSuccessMsg(""); setView("signup"); }} style={{
                                         background: "none", border: "none", color: "var(--vet-blue)",
                                         cursor: "pointer", fontSize: "0.88rem", fontWeight: 600,
                                         marginBottom: "1rem", display: "flex", alignItems: "center", gap: "0.3rem",
@@ -344,7 +331,8 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }: Props) {
                                     <form onSubmit={handleSignupOtpSubmit} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
                                         <div><label style={labelStyle}>Verification Code (6 digits)</label>
                                             <input type="text" required maxLength={6} value={otp} onChange={e => setOtp(e.target.value)}
-                                                style={{ ...inputStyle, letterSpacing: "0.3em", fontSize: "1.1rem", textAlign: "center" }}
+                                                className="input"
+                                                style={{ letterSpacing: "0.3em", fontSize: "1.1rem", textAlign: "center" }}
                                                 placeholder="000000" /></div>
                                         {errorMsg && <ErrorBox msg={errorMsg} />}
                                         <button type="submit" disabled={isLoading} className="btn-primary"
@@ -369,7 +357,7 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }: Props) {
                                     </p>
                                     <form onSubmit={handleForgotSubmit} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
                                         <div><label style={labelStyle}>Email Address</label>
-                                            <input type="email" required value={forgotEmail} onChange={e => setForgotEmail(e.target.value)} style={inputStyle} placeholder="you@example.com" /></div>
+                                            <input type="email" required value={forgotEmail} onChange={e => setForgotEmail(e.target.value)} className="input" placeholder="you@example.com" /></div>
                                         {errorMsg && <ErrorBox msg={errorMsg} />}
                                         <button type="submit" disabled={isLoading} className="btn-primary"
                                             style={{ width: "100%", justifyContent: "center", padding: "0.85rem", opacity: isLoading ? 0.7 : 1 }}>
@@ -402,13 +390,14 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }: Props) {
                                     )}
                                     <form onSubmit={handleResetSubmit} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
                                         <div><label style={labelStyle}>Email Address</label>
-                                            <input type="email" required value={forgotEmail} onChange={e => setForgotEmail(e.target.value)} style={inputStyle} placeholder="you@example.com" /></div>
+                                            <input type="email" required value={forgotEmail} onChange={e => setForgotEmail(e.target.value)} className="input" placeholder="you@example.com" /></div>
                                         <div><label style={labelStyle}>Reset Code (6 digits)</label>
                                             <input type="text" required maxLength={6} value={resetCode} onChange={e => setResetCode(e.target.value)}
-                                                style={{ ...inputStyle, letterSpacing: "0.3em", fontSize: "1.1rem", textAlign: "center" }}
+                                                className="input"
+                                                style={{ letterSpacing: "0.3em", fontSize: "1.1rem", textAlign: "center" }}
                                                 placeholder="000000" /></div>
                                         <div><label style={labelStyle}>New Password</label>
-                                            <input type="password" required minLength={6} value={newPassword} onChange={e => setNewPassword(e.target.value)} style={inputStyle} placeholder="Min 6 characters" /></div>
+                                            <input type="password" required minLength={6} value={newPassword} onChange={e => setNewPassword(e.target.value)} className="input" placeholder="Min 6 characters" /></div>
                                         {errorMsg && <ErrorBox msg={errorMsg} />}
                                         <button type="submit" disabled={isLoading} className="btn-primary"
                                             style={{ width: "100%", justifyContent: "center", padding: "0.85rem", opacity: isLoading ? 0.7 : 1 }}>

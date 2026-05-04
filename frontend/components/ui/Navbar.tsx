@@ -26,6 +26,9 @@ export default function Navbar() {
     const confirmLogout = () => {
         setUser(null);
         localStorage.removeItem("vetworld_token");
+        localStorage.removeItem("vetworld_user");
+        // Clear persisted cart so next user doesn't see previous user's items
+        localStorage.removeItem("vetworld-cart");
         setShowLogoutConfirm(false);
     };
 
@@ -97,9 +100,9 @@ export default function Navbar() {
                     <AnimatePresence>
                         {isProfileDropdownOpen && (
                             <>
-                                <div 
-                                    style={{ position: "fixed", inset: 0, zIndex: 90 }} 
-                                    onClick={() => setIsProfileDropdownOpen(false)} 
+                                <div
+                                    style={{ position: "fixed", inset: 0, zIndex: 90 }}
+                                    onClick={() => setIsProfileDropdownOpen(false)}
                                 />
                                 <motion.div
                                     initial={{ opacity: 0, scale: 0.95, y: 10 }}
@@ -163,9 +166,9 @@ export default function Navbar() {
                                         {user.isAdmin && (
                                             <DropdownLink href="/admin" icon={<DashboardIcon />} label="Admin Dashboard" onClick={() => setIsProfileDropdownOpen(false)} />
                                         )}
-                                        
+
                                         <div style={{ height: "1px", background: "var(--border)", margin: "0.5rem" }} />
-                                        
+
                                         <button
                                             onClick={() => {
                                                 setIsProfileDropdownOpen(false);

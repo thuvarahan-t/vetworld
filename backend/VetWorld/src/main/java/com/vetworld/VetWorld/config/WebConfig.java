@@ -15,6 +15,14 @@ public class WebConfig implements WebMvcConfigurer {
 
     @Override
     public void addCorsMappings(CorsRegistry registry) {
+        // PayHere webhook — must accept POST from any origin (PayHere server IPs)
+        registry.addMapping("/api/payments/notify")
+                .allowedOriginPatterns("*")
+                .allowedMethods("POST")
+                .allowedHeaders("*")
+                .allowCredentials(false)
+                .maxAge(3600);
+
         String[] origins = Arrays.stream(allowedOriginPatterns.split(","))
                 .map(String::trim)
                 .filter(s -> !s.isEmpty())
