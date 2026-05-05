@@ -1,6 +1,7 @@
 "use client";
 import { motion, AnimatePresence } from "framer-motion";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 
 export interface User {
     name: string;
@@ -50,6 +51,7 @@ function EyeOffIcon() {
 }
 
 export default function AuthModal({ isOpen, onClose, onLoginSuccess }: Props) {
+    const [mounted, setMounted] = useState(false);
     const [view, setView] = useState<View>("login");
     const [errorMsg, setErrorMsg] = useState("");
     const [successMsg, setSuccessMsg] = useState("");
@@ -68,6 +70,14 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }: Props) {
     const [forgotEmail, setForgotEmail] = useState("");
     const [resetCode, setResetCode] = useState("");
     const [newPassword, setNewPassword] = useState("");
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
+
+    if (!mounted) return null;
+    const portalRoot = document.body;
+    if (!portalRoot) return null;
 
     const reset = () => {
         setErrorMsg(""); setSuccessMsg("");
@@ -208,7 +218,7 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }: Props) {
         finally { setIsLoading(false); }
     };
 
-    return (
+    return createPortal(
         <AnimatePresence>
             {isOpen && (
                 <>
@@ -216,14 +226,15 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }: Props) {
                     <motion.div
                         initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                         onClick={() => { onClose(); reset(); }}
-                        style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", backdropFilter: "blur(4px)", zIndex: 200 }}
+                        style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)", zIndex: 2147483646 }}
                     />
 
-                    {/* Centering container — flexbox ensures perfect vertical+horizontal center */}
+                    {/* Dialog container — keep the modal fully visible and scrollable on smaller screens */}
                     <div style={{
                         position: "fixed", inset: 0,
                         display: "flex", alignItems: "center", justifyContent: "center",
-                        zIndex: 201, pointerEvents: "none",
+                        padding: "1.5rem", zIndex: 2147483647, pointerEvents: "none",
+                        overflowY: "auto", WebkitOverflowScrolling: "touch",
                     }}>
                         {/* Modal card */}
                         <motion.div
@@ -233,9 +244,10 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }: Props) {
                             transition={{ type: "spring", damping: 25, stiffness: 280 }}
                             style={{
                                 background: "var(--surface)", borderRadius: "var(--radius-lg)",
-                                boxShadow: "var(--shadow-lg)", padding: "2rem",
-                                width: "min(460px, 94vw)", maxHeight: "90vh",
+                                boxShadow: "var(--shadow-lg)", padding: "2.5rem 2rem 2rem",
+                                width: "min(460px, 100%)", maxHeight: "min(700px, calc(100vh - 3rem))",
                                 overflowY: "auto", position: "relative", pointerEvents: "all",
+                                margin: "auto",
                             }}
                         >
                             {/* Close button */}
@@ -411,6 +423,6 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }: Props) {
                 </>
             )}
         </AnimatePresence>
-    );
+    , portalRoot);
 }
   
