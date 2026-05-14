@@ -3,7 +3,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useCartStore } from "@/store/cartStore";
 import { motion, AnimatePresence } from "framer-motion";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import AuthModal, { User } from "./AuthModal";
 import ProfileModal from "./ProfileModal";
@@ -22,6 +22,26 @@ export default function Navbar() {
     const [isSearchFocused, setIsSearchFocused] = useState(false);
     const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
     const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+    const profileDropdownRef = useRef<HTMLDivElement>(null);
+
+    // Close dropdown when clicking outside
+    useEffect(() => {
+        if (!isProfileDropdownOpen) return;
+
+        const handleClickOutside = (event: MouseEvent | PointerEvent) => {
+            if (profileDropdownRef.current && !profileDropdownRef.current.contains(event.target as Node)) {
+                setIsProfileDropdownOpen(false);
+            }
+        };
+
+        document.addEventListener("pointerdown", handleClickOutside);
+        document.addEventListener("touchstart", handleClickOutside);
+
+        return () => {
+            document.removeEventListener("pointerdown", handleClickOutside);
+            document.removeEventListener("touchstart", handleClickOutside);
+        };
+    }, [isProfileDropdownOpen]);
 
     const confirmLogout = () => {
         setUser(null);
@@ -69,7 +89,7 @@ export default function Navbar() {
 
         if (user) {
             return (
-                <div style={{ position: "relative" }}>
+                <div style={{ position: "relative" }} ref={profileDropdownRef}>
                     <button
                         onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
                         style={{
@@ -99,12 +119,7 @@ export default function Navbar() {
 
                     <AnimatePresence>
                         {isProfileDropdownOpen && (
-                            <>
-                                <div
-                                    style={{ position: "fixed", inset: 0, zIndex: 90 }}
-                                    onClick={() => setIsProfileDropdownOpen(false)}
-                                />
-                                <motion.div
+                            <motion.div
                                     initial={{ opacity: 0, scale: 0.95, y: 10 }}
                                     animate={{ opacity: 1, scale: 1, y: 0 }}
                                     exit={{ opacity: 0, scale: 0.95, y: 10 }}
@@ -198,7 +213,6 @@ export default function Navbar() {
                                         </button>
                                     </div>
                                 </motion.div>
-                            </>
                         )}
                     </AnimatePresence>
                 </div>
