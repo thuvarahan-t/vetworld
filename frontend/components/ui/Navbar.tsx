@@ -28,7 +28,7 @@ export default function Navbar() {
     useEffect(() => {
         if (!isProfileDropdownOpen) return;
 
-        const handleClickOutside = (event: MouseEvent | PointerEvent) => {
+        const handleClickOutside = (event: MouseEvent | PointerEvent | TouchEvent) => {
             if (profileDropdownRef.current && !profileDropdownRef.current.contains(event.target as Node)) {
                 setIsProfileDropdownOpen(false);
             }
