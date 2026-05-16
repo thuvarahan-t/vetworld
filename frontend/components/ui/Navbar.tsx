@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useCartStore } from "@/store/cartStore";
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import AuthModal, { User } from "./AuthModal";
 import ProfileModal from "./ProfileModal";
@@ -252,6 +253,7 @@ export default function Navbar() {
     };
 
     return (
+        <>
         <header
             style={{
                 position: "sticky",
@@ -408,73 +410,79 @@ export default function Navbar() {
                 onUpdateSuccess={(u) => setUser({ ...user, ...u })}
             />
 
-            {/* ── Logout Confirmation Dialog ── */}
-            {showLogoutConfirm && (
-                <>
-                    {/* Backdrop */}
-                    <motion.div
-                        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                        onClick={() => setShowLogoutConfirm(false)}
-                        style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", backdropFilter: "blur(4px)", zIndex: 300 }}
-                    />
-
-                    {/* Dialog centering wrapper */}
-                    <div style={{ position: "fixed", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 301, pointerEvents: "none" }}>
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.88, y: 20 }}
-                            animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.88, y: 20 }}
-                            transition={{ type: "spring", damping: 25, stiffness: 300 }}
-                            style={{
-                                background: "var(--surface)", borderRadius: "var(--radius-lg)",
-                                boxShadow: "var(--shadow-lg)", padding: "2rem",
-                                width: "min(380px, 90vw)", pointerEvents: "all",
-                                textAlign: "center",
-                            }}
-                        >
-                            {/* Warning icon */}
-                            <div style={{ fontSize: "2.5rem", marginBottom: "0.75rem" }}>⚠️</div>
-                            <h3 style={{ fontSize: "1.15rem", fontWeight: 700, marginBottom: "0.5rem", color: "var(--text-primary)" }}>
-                                Confirm Logout
-                            </h3>
-                            <p style={{ color: "var(--text-secondary)", fontSize: "0.9rem", marginBottom: "1.5rem", lineHeight: 1.5 }}>
-                                Are you sure you want to logout?<br />You will need to sign in again to access your account.
-                            </p>
-
-                            {/* Buttons */}
-                            <div style={{ display: "flex", gap: "0.75rem", justifyContent: "center" }}>
-                                <button
-                                    onClick={() => setShowLogoutConfirm(false)}
-                                    style={{
-                                        flex: 1, padding: "0.7rem 1.2rem", borderRadius: "var(--radius-sm)",
-                                        border: "1.5px solid var(--border)", background: "transparent",
-                                        color: "var(--text-primary)", fontWeight: 600, fontSize: "0.9rem",
-                                        cursor: "pointer", transition: "all var(--transition)",
-                                    }}
-                                    onMouseEnter={e => { e.currentTarget.style.borderColor = "var(--vet-blue)"; e.currentTarget.style.color = "var(--vet-blue)"; }}
-                                    onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.color = "var(--text-primary)"; }}
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    onClick={confirmLogout}
-                                    style={{
-                                        flex: 1, padding: "0.7rem 1.2rem", borderRadius: "var(--radius-sm)",
-                                        border: "none", background: "rgb(239, 68, 68)",
-                                        color: "#fff", fontWeight: 600, fontSize: "0.9rem",
-                                        cursor: "pointer", transition: "filter var(--transition)",
-                                    }}
-                                    onMouseEnter={e => e.currentTarget.style.filter = "brightness(1.1)"}
-                                    onMouseLeave={e => e.currentTarget.style.filter = "brightness(1)"}
-                                >
-                                    Yes, Logout
-                                </button>
-                            </div>
-                        </motion.div>
-                    </div>
-                </>
-            )}
         </header>
+
+            {/* ── Logout Confirmation Dialog (Portal) ── */}
+            {isMounted && createPortal(
+                <AnimatePresence>
+                    {showLogoutConfirm && (
+                        <>
+                            {/* Backdrop */}
+                            <motion.div
+                                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                                onClick={() => setShowLogoutConfirm(false)}
+                                style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)", zIndex: 2147483646 }}
+                            />
+
+                            {/* Dialog centering wrapper */}
+                            <div style={{ position: "fixed", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 2147483647, pointerEvents: "none" }}>
+                                <motion.div
+                                    initial={{ opacity: 0, scale: 0.88, y: 20 }}
+                                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                                    exit={{ opacity: 0, scale: 0.88, y: 20 }}
+                                    transition={{ type: "spring", damping: 25, stiffness: 300 }}
+                                    style={{
+                                        background: "var(--surface)", borderRadius: "var(--radius-lg)",
+                                        boxShadow: "var(--shadow-lg)", padding: "2rem",
+                                        width: "min(380px, 90vw)", pointerEvents: "all",
+                                        textAlign: "center",
+                                    }}
+                                >
+                                    {/* Warning icon */}
+                                    <div style={{ fontSize: "2.5rem", marginBottom: "0.75rem" }}>⚠️</div>
+                                    <h3 style={{ fontSize: "1.15rem", fontWeight: 700, marginBottom: "0.5rem", color: "var(--text-primary)" }}>
+                                        Confirm Logout
+                                    </h3>
+                                    <p style={{ color: "var(--text-secondary)", fontSize: "0.9rem", marginBottom: "1.5rem", lineHeight: 1.5 }}>
+                                        Are you sure you want to logout?<br />You will need to sign in again to access your account.
+                                    </p>
+
+                                    {/* Buttons */}
+                                    <div style={{ display: "flex", gap: "0.75rem", justifyContent: "center" }}>
+                                        <button
+                                            onClick={() => setShowLogoutConfirm(false)}
+                                            style={{
+                                                flex: 1, padding: "0.7rem 1.2rem", borderRadius: "var(--radius-sm)",
+                                                border: "1.5px solid var(--border)", background: "transparent",
+                                                color: "var(--text-primary)", fontWeight: 600, fontSize: "0.9rem",
+                                                cursor: "pointer", transition: "all var(--transition)",
+                                            }}
+                                            onMouseEnter={e => { e.currentTarget.style.borderColor = "var(--vet-blue)"; e.currentTarget.style.color = "var(--vet-blue)"; }}
+                                            onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.color = "var(--text-primary)"; }}
+                                        >
+                                            Cancel
+                                        </button>
+                                        <button
+                                            onClick={confirmLogout}
+                                            style={{
+                                                flex: 1, padding: "0.7rem 1.2rem", borderRadius: "var(--radius-sm)",
+                                                border: "none", background: "rgb(239, 68, 68)",
+                                                color: "#fff", fontWeight: 600, fontSize: "0.9rem",
+                                                cursor: "pointer", transition: "filter var(--transition)",
+                                            }}
+                                            onMouseEnter={e => e.currentTarget.style.filter = "brightness(1.1)"}
+                                            onMouseLeave={e => e.currentTarget.style.filter = "brightness(1)"}
+                                        >
+                                            Yes, Logout
+                                        </button>
+                                    </div>
+                                </motion.div>
+                            </div>
+                        </>
+                    )}
+                </AnimatePresence>
+            , document.body)}
+        </>
     );
 }
 

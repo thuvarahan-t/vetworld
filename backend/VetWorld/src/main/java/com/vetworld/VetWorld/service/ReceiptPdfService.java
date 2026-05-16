@@ -18,6 +18,11 @@ import org.springframework.stereotype.Service;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.List;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 
 @Service
 public class ReceiptPdfService {
@@ -27,6 +32,26 @@ public class ReceiptPdfService {
     private static final DeviceRgb GREY_TEXT = new DeviceRgb(71, 85, 105);
     private static final DeviceRgb GREEN = new DeviceRgb(13, 158, 110);
     private static final DeviceRgb RED = new DeviceRgb(239, 68, 68);
+    private static final ObjectMapper MAPPER = new ObjectMapper();
+
+    /** Parse JSON address {"line1":"...","line2":"...","district":"..."} -> readable string */
+    private String formatAddress(String raw) {
+        if (raw == null || raw.isBlank()) return "";
+        try {
+            JsonNode node = MAPPER.readTree(raw);
+            List<String> parts = new ArrayList<>();
+            if (node.hasNonNull("line1") && !node.get("line1").asText().isBlank())
+                parts.add(node.get("line1").asText());
+            if (node.hasNonNull("line2") && !node.get("line2").asText().isBlank())
+                parts.add(node.get("line2").asText());
+            if (node.hasNonNull("district") && !node.get("district").asText().isBlank())
+                parts.add(node.get("district").asText());
+            return String.join(", ", parts);
+        } catch (Exception e) {
+            return raw; // fallback: plain text
+        }
+    }
+
 
     public byte[] generateReceipt(Order order) throws IOException {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -120,7 +145,7 @@ public class ReceiptPdfService {
                 .setFont(boldFont).setFontSize(12).setFontColor(ColorConstants.BLACK));
         customerCell.add(new Paragraph(order.getCustomerPhone())
                 .setFont(regularFont).setFontSize(10).setFontColor(GREY_TEXT));
-        customerCell.add(new Paragraph(order.getDeliveryAddress())
+        customerCell.add(new Paragraph(formatAddress(order.getDeliveryAddress()))
                 .setFont(regularFont).setFontSize(10).setFontColor(GREY_TEXT));
         infoTable.addCell(customerCell);
         document.add(infoTable);
