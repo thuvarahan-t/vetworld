@@ -126,7 +126,7 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }: Props) {
             scale: 0.98,
         }),
     };
-    const slideTrans = { duration: 0.18, ease: "easeInOut" };
+    const slideTrans = { duration: 0.18, ease: [0.4, 0, 0.2, 1] as const };
 
     // Tab toggle — sliding pill indicator
     const Tabs = () => (
