@@ -26,6 +26,18 @@ function statusLabel(status: string) {
     return status.replace(/_/g, " ");
 }
 
+// Parse JSON address → readable string
+function formatAddress(raw: string): string {
+    if (!raw) return "—";
+    try {
+        const p = JSON.parse(raw);
+        if (p && typeof p === "object" && "line1" in p) {
+            return [p.line1, p.line2, p.district].filter(Boolean).join(", ");
+        }
+    } catch {}
+    return raw;
+}
+
 // ─── Skeleton loader ───────────────────────────────────────────────────────
 function OrderSkeleton() {
     return (
@@ -534,8 +546,8 @@ export default function MyOrdersPage() {
 
                             {/* ─── Footer ─────────────────────────────────── */}
                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.75rem", borderTop: "1px solid var(--border)", paddingTop: "1.25rem" }}>
-                                <div style={{ fontSize: "0.85rem", color: "var(--text-secondary)", maxWidth: 300 }}>
-                                    <strong>📍 Delivery:</strong> {order.deliveryAddress}
+                                <div style={{ fontSize: "0.85rem", color: "var(--text-secondary)", flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                    <strong>📍 Delivery:</strong> {formatAddress(order.deliveryAddress)}
                                 </div>
                                 <button
                                     onClick={() => handleDownloadReceipt(order.id)}
