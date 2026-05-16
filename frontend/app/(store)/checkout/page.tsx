@@ -8,6 +8,19 @@ import type { Order } from "@/types";
 import Link from "next/link";
 import Script from "next/script";
 import { motion, AnimatePresence } from "framer-motion";
+import DistrictDropdown from "@/components/ui/DistrictDropdown";
+
+
+
+// Parse stored address (JSON or legacy plain text)
+function parseAddress(raw: string): { line1: string; line2: string; district: string } {
+    if (!raw) return { line1: "", line2: "", district: "" };
+    try {
+        const p = JSON.parse(raw);
+        if (p && typeof p === "object" && "line1" in p) return p;
+    } catch {}
+    return { line1: raw, line2: "", district: "" };
+}
 
 type PaymentMethod = "PAYHERE" | "SLIP";
 
@@ -130,8 +143,10 @@ export default function CheckoutPage() {
 
     // Step 1 fields
     const [name, setName] = useState("");
-    const [phone, setPhone] = useState("");
-    const [address, setAddress] = useState("");
+    const [phoneDigits, setPhoneDigits] = useState(""); // 9 digits without +94
+    const [addrLine1, setAddrLine1] = useState("");
+    const [addrLine2, setAddrLine2] = useState("");
+    const [district, setDistrict] = useState("");
     const [payMethod, setPayMethod] = useState<PaymentMethod>("PAYHERE");
 
     // Slip upload
@@ -145,6 +160,7 @@ export default function CheckoutPage() {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState("");
 
+    // ── Load profile ONCE on mount — never re-run so edited values are preserved ──
     useEffect(() => {
         const userStr = localStorage.getItem("vetworld_user");
         const token = localStorage.getItem("vetworld_token");
@@ -153,16 +169,33 @@ export default function CheckoutPage() {
             const user = JSON.parse(userStr);
             setIsAuthenticated(true);
             setName(user.name || "");
-            setPhone(user.phone || "");
-            setAddress(user.address || "");
+            // Parse phone digits
+            const rawPhone = user.phone || "";
+            const digits = rawPhone.startsWith("+94") ? rawPhone.slice(3).trim() : rawPhone;
+            setPhoneDigits(digits.replace(/\D/g, "").slice(0, 9));
+            // Parse structured address
+            const addr = parseAddress(user.address || "");
+            setAddrLine1(addr.line1);
+            setAddrLine2(addr.line2);
+            setDistrict(addr.district);
         } catch { router.push("/"); }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []); // ← empty deps: run once only
+
+    // ── Guard: redirect to cart if empty (watches step/items separately) ──
+    useEffect(() => {
         if (items.length === 0 && step !== 3 && !placedOrderNumber) router.push("/cart");
-    }, [router, items.length, step]);
+    }, [items.length, step, placedOrderNumber, router]);
+
+    // Build full phone and address strings for API
+    const fullPhone = `+94${phoneDigits}`;
+    const fullAddress = JSON.stringify({ line1: addrLine1.trim(), line2: addrLine2.trim(), district });
+    const displayAddress = [addrLine1, addrLine2, district].filter(Boolean).join(", ");
 
     const buildPayload = () => ({
         customerName: name,
-        customerPhone: phone,
-        deliveryAddress: address,
+        customerPhone: fullPhone,
+        deliveryAddress: fullAddress,
         items: items.map(i => ({
             productId: i.productId, typeId: i.typeId,
             productName: i.productName, typeName: i.typeName,
@@ -173,10 +206,10 @@ export default function CheckoutPage() {
     const handleProceedToReview = (e: React.FormEvent) => {
         e.preventDefault();
         setError("");
-        if (!name.trim() || !phone.trim() || !address.trim()) {
-            setError("Please fill in all delivery details.");
-            return;
-        }
+        if (!name.trim()) { setError("Please enter recipient name."); return; }
+        if (phoneDigits.length !== 9) { setError("Phone must be exactly 9 digits after +94."); return; }
+        if (!addrLine1.trim()) { setError("Address Line 1 is required."); return; }
+        if (!district) { setError("Please select your district."); return; }
         setStep(2);
     };
 
@@ -206,7 +239,7 @@ export default function CheckoutPage() {
                 first_name: name.split(" ")[0] || name,
                 last_name: name.split(" ").slice(1).join(" ") || "",
                 email: JSON.parse(localStorage.getItem("vetworld_user") || "{}").email || "",
-                phone, address, city: "Sri Lanka", country: "Sri Lanka",
+                phone: fullPhone, address: displayAddress, city: "Sri Lanka", country: "Sri Lanka",
             };
             window.payhere.onCompleted = (orderId: string) => {
                 console.log("PayHere onCompleted for:", orderId);
@@ -294,20 +327,109 @@ export default function CheckoutPage() {
                         initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }}
                         onSubmit={handleProceedToReview} className="card" style={{ padding: "2rem" }}>
 
-                        <h2 style={{ fontSize: "1.2rem", fontWeight: 700, marginBottom: "1.5rem" }}>Delivery Details</h2>
+                        {/* ── Header + recipient info banner ── */}
+                        <div style={{ marginBottom: "1.5rem" }}>
+                            <h2 style={{ fontSize: "1.2rem", fontWeight: 700, marginBottom: "0.6rem" }}>Delivery Details</h2>
+                            <div style={{
+                                display: "flex", alignItems: "flex-start", gap: "0.65rem",
+                                padding: "0.75rem 1rem",
+                                background: "rgba(26,115,232,0.06)",
+                                border: "1px solid rgba(26,115,232,0.15)",
+                                borderRadius: 12,
+                                fontSize: "0.82rem", color: "var(--text-secondary)", lineHeight: 1.5,
+                            }}>
+                                <span style={{ fontSize: "1rem", flexShrink: 0, marginTop: "0.05rem" }}>📦</span>
+                                <span>
+                                    Pre-filled from your profile.{" "}
+                                    <strong style={{ color: "var(--text-primary)" }}>Edit any field</strong> to deliver to a different person —
+                                    the details you enter here will be used as the delivery address for this order.
+                                </span>
+                            </div>
+                        </div>
 
                         <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
                             <div>
-                                <label style={{ display: "block", marginBottom: "0.4rem", fontSize: "0.88rem", fontWeight: 600 }}>Recipient Name</label>
-                                <input type="text" className="input" value={name} onChange={e => setName(e.target.value)} required placeholder="Full name" />
+                                <label style={{ display: "block", marginBottom: "0.4rem", fontSize: "0.88rem", fontWeight: 600 }}>
+                                    Recipient Name
+                                </label>
+                                <input type="text" className="input" value={name} onChange={e => setName(e.target.value)} required placeholder="Full name of recipient" />
                             </div>
+
                             <div>
                                 <label style={{ display: "block", marginBottom: "0.4rem", fontSize: "0.88rem", fontWeight: 600 }}>Contact Phone</label>
-                                <input type="tel" className="input" value={phone} onChange={e => setPhone(e.target.value)} required placeholder="+94 71 234 5678" />
+                                <div style={{ display: "flex" }}>
+                                    <span style={{
+                                        display: "flex", alignItems: "center",
+                                        padding: "0.6rem 0.75rem",
+                                        background: "var(--bg)",
+                                        border: "1px solid var(--border)",
+                                        borderRight: "none",
+                                        borderRadius: "var(--radius-sm) 0 0 var(--radius-sm)",
+                                        fontSize: "0.9rem", fontWeight: 700,
+                                        color: "var(--text-primary)",
+                                        whiteSpace: "nowrap",
+                                    }}>🇱🇰 +94</span>
+                                    <input
+                                        type="tel"
+                                        inputMode="numeric"
+                                        className="input"
+                                        value={phoneDigits}
+                                        onChange={e => setPhoneDigits(e.target.value.replace(/\D/g, "").slice(0, 9))}
+                                        maxLength={9}
+                                        required
+                                        placeholder="771234567"
+                                        style={{ borderRadius: "0 var(--radius-sm) var(--radius-sm) 0", letterSpacing: "0.08em" }}
+                                    />
+                                </div>
+                                <p style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: "0.25rem" }}>9 digits · e.g. 771234567</p>
                             </div>
+
+                            {/* ── Glass Address Card ── */}
                             <div>
-                                <label style={{ display: "block", marginBottom: "0.4rem", fontSize: "0.88rem", fontWeight: 600 }}>Delivery Address</label>
-                                <textarea className="input" rows={3} value={address} onChange={e => setAddress(e.target.value)} required style={{ resize: "vertical" }} placeholder="No. 10, Main Street, Colombo" />
+                                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.65rem" }}>
+                                    <span style={{ fontSize: "0.78rem", fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", color: "var(--text-secondary)" }}>📍 Delivery Address</span>
+                                    <span style={{ fontSize: "0.7rem", color: "rgb(239,68,68)", fontWeight: 700 }}>*</span>
+                                </div>
+
+                                {/* Unified glass card — Line 1 + Line 2 */}
+                                <div style={{
+                                    borderRadius: "14px",
+                                    overflow: "hidden",
+                                    background: "rgba(248, 250, 255, 0.65)",
+                                    backdropFilter: "blur(20px)",
+                                    WebkitBackdropFilter: "blur(20px)",
+                                    border: "1.5px solid rgba(26, 115, 232, 0.14)",
+                                    boxShadow: "0 2px 20px rgba(26,115,232,0.06), inset 0 1px 0 rgba(255,255,255,0.8)",
+                                }}>
+                                    <div style={{ display: "flex", alignItems: "center", padding: "0 1rem" }}>
+                                        <span style={{ fontSize: "1rem", opacity: 0.55, flexShrink: 0, marginRight: "0.6rem" }}>🏠</span>
+                                        <input
+                                            type="text" required value={addrLine1}
+                                            onChange={e => setAddrLine1(e.target.value)}
+                                            placeholder="Address Line 1  (No. 42, Galle Road)"
+                                            style={{ width: "100%", padding: "0.9rem 0", border: "none", outline: "none", background: "transparent", fontSize: "0.9rem", color: "var(--text-primary)", fontFamily: "inherit" }}
+                                        />
+                                    </div>
+                                    <div style={{ height: "1px", background: "rgba(26,115,232,0.1)", margin: "0 1rem" }} />
+                                    <div style={{ display: "flex", alignItems: "center", padding: "0 1rem" }}>
+                                        <span style={{ fontSize: "1rem", opacity: 0.45, flexShrink: 0, marginRight: "0.6rem" }}>🏢</span>
+                                        <input
+                                            type="text" value={addrLine2}
+                                            onChange={e => setAddrLine2(e.target.value)}
+                                            placeholder="Address Line 2  (optional · Apartment / Area)"
+                                            style={{ width: "100%", padding: "0.9rem 0", border: "none", outline: "none", background: "transparent", fontSize: "0.9rem", color: "var(--text-primary)", fontFamily: "inherit" }}
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* District — custom glass dropdown */}
+                                <div style={{ marginTop: "0.75rem" }}>
+                                    <DistrictDropdown
+                                        value={district}
+                                        onChange={setDistrict}
+                                        required
+                                    />
+                                </div>
                             </div>
 
                             {/* ── Payment Method Selection ── */}
@@ -352,8 +474,8 @@ export default function CheckoutPage() {
 
                         {/* Delivery summary */}
                         <div style={{ background: "var(--background)", padding: "1rem", borderRadius: "var(--radius-sm)", marginBottom: "1.5rem" }}>
-                            <p style={{ fontWeight: 700, marginBottom: "0.2rem" }}>{name} · {phone}</p>
-                            <p style={{ color: "var(--text-secondary)", fontSize: "0.88rem", marginBottom: "0.5rem" }}>{address}</p>
+                            <p style={{ fontWeight: 700, marginBottom: "0.2rem" }}>{name} · +94{phoneDigits}</p>
+                            <p style={{ color: "var(--text-secondary)", fontSize: "0.88rem", marginBottom: "0.5rem" }}>{displayAddress}</p>
                             <div style={{
                                 display: "inline-flex", alignItems: "center", gap: "0.5rem",
                                 background: payMethod === "PAYHERE" ? "var(--vet-blue-light)" : "#ecfdf5",
