@@ -2,6 +2,8 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
+import DistrictDropdown from "./DistrictDropdown";
+
 
 export interface User {
     name: string;
@@ -53,6 +55,7 @@ function EyeOffIcon() {
 export default function AuthModal({ isOpen, onClose, onLoginSuccess }: Props) {
     const [mounted, setMounted] = useState(false);
     const [view, setView] = useState<View>("login");
+    const [animDir, setAnimDir] = useState<"left"|"right"|"up"|"down">("left");
     const [errorMsg, setErrorMsg] = useState("");
     const [successMsg, setSuccessMsg] = useState("");
     const [isLoading, setIsLoading] = useState(false);
@@ -62,8 +65,10 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }: Props) {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [name, setName] = useState("");
-    const [phone, setPhone] = useState("");
-    const [address, setAddress] = useState("");
+    const [phoneDigits, setPhoneDigits] = useState("");
+    const [addrLine1, setAddrLine1] = useState("");
+    const [addrLine2, setAddrLine2] = useState("");
+    const [district, setDistrict] = useState("");
     const [otp, setOtp] = useState("");
 
     // Forgot / reset fields
@@ -79,14 +84,22 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }: Props) {
     const portalRoot = document.body;
     if (!portalRoot) return null;
 
-    const reset = () => {
+    const clearFields = () => {
         setErrorMsg(""); setSuccessMsg("");
-        setEmail(""); setPassword(""); setName(""); setPhone(""); setAddress(""); setOtp("");
+        setEmail(""); setPassword(""); setName("");
+        setPhoneDigits(""); setAddrLine1(""); setAddrLine2(""); setDistrict("");
+        setOtp("");
         setForgotEmail(""); setResetCode(""); setNewPassword("");
-        setView("login");
     };
 
-    const goTo = (v: View) => { reset(); setView(v); };
+    const reset = () => { clearFields(); setView("login"); };
+
+    const goTo = (v: View, dir?: "left"|"right"|"up"|"down") => {
+        clearFields();
+        const auto = v === "signup" ? "left" : v === "login" ? "right" : "up";
+        setAnimDir(dir ?? auto);
+        setView(v);
+    };
 
     const fetchWithTimeout = (input: RequestInfo | URL, init?: RequestInit, timeoutMs = 20000) => {
         const controller = new AbortController();
@@ -98,22 +111,53 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }: Props) {
         }).finally(() => clearTimeout(timer));
     };
 
-    // Tab toggle buttons (Login / Signup)
+    const slideVariants = {
+        enter: (dir: string) => ({
+            x: dir === "left" ? 16 : dir === "right" ? -16 : 0,
+            y: dir === "up" ? 8 : dir === "down" ? -8 : 0,
+            opacity: 0,
+            scale: 0.98,
+        }),
+        center: { x: 0, y: 0, opacity: 1, scale: 1 },
+        exit: (dir: string) => ({
+            x: dir === "left" ? -16 : dir === "right" ? 16 : 0,
+            y: dir === "up" ? -8 : dir === "down" ? 8 : 0,
+            opacity: 0,
+            scale: 0.98,
+        }),
+    };
+    const slideTrans = { duration: 0.18, ease: "easeInOut" };
+
+    // Tab toggle — sliding pill indicator
     const Tabs = () => (
-        <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1.5rem" }}>
+        <div style={{ position: "relative", display: "flex", background: "rgba(0,0,0,0.05)", borderRadius: 10, padding: 3, marginBottom: "0.75rem" }}>
+            <motion.div
+                layoutId="auth-tab-pill"
+                style={{
+                    position: "absolute", inset: 3,
+                    width: "calc(50% - 3px)",
+                    background: "var(--vet-blue)",
+                    borderRadius: 8,
+                    left: view === "login" ? 3 : "calc(50%)",
+                }}
+                transition={{ type: "spring", damping: 28, stiffness: 380 }}
+            />
             {(["login", "signup"] as View[]).map(v => (
-                <button key={v} onClick={() => goTo(v)} style={{
-                    flex: 1, padding: "0.6rem", borderRadius: "var(--radius-sm)", border: "1.5px solid",
-                    borderColor: view === v ? "var(--vet-blue)" : "var(--border)",
-                    background: view === v ? "var(--vet-blue-light)" : "transparent",
-                    color: view === v ? "var(--vet-blue)" : "var(--text-secondary)",
-                    fontWeight: 600, cursor: "pointer", fontSize: "0.9rem", transition: "all var(--transition)",
-                }}>
+                <button key={v}
+                    onClick={() => goTo(v)}
+                    style={{
+                        flex: 1, padding: "0.5rem", background: "transparent", border: "none",
+                        color: view === v ? "white" : "var(--text-secondary)",
+                        fontWeight: 600, cursor: "pointer", fontSize: "0.88rem",
+                        position: "relative", zIndex: 1, borderRadius: 8,
+                        transition: "color 0.2s",
+                    }}>
                     {v === "login" ? "Sign In" : "Sign Up"}
                 </button>
             ))}
         </div>
     );
+
 
     // ── Login ─────────────────────────────────────────────────────────
     const handleLoginSubmit = async (e: React.FormEvent) => {
@@ -152,13 +196,14 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }: Props) {
         finally { setIsLoading(false); }
     };
 
-    // ── Signup OTP Verify ─────────────────────────────────────────────
     const handleSignupOtpSubmit = async (e: React.FormEvent) => {
         e.preventDefault(); setErrorMsg(""); setIsLoading(true);
+        const fullPhone = `+94${phoneDigits.replace(/\D/g, "").slice(0, 9)}`;
+        const fullAddress = JSON.stringify({ line1: addrLine1.trim(), line2: addrLine2.trim(), district });
         try {
             const res = await fetchWithTimeout("/api/auth/signup", {
                 method: "POST", headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ name, email, password, phone, address, otp }),
+                body: JSON.stringify({ name, email, password, phone: fullPhone, address: fullAddress, otp }),
             });
             const data = await res.json();
             if (!res.ok) { setErrorMsg(data.error || "Signup failed."); return; }
@@ -244,8 +289,8 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }: Props) {
                             transition={{ type: "spring", damping: 25, stiffness: 280 }}
                             style={{
                                 background: "var(--surface)", borderRadius: "var(--radius-lg)",
-                                boxShadow: "var(--shadow-lg)", padding: "2.5rem 2rem 2rem",
-                                width: "min(460px, 100%)", maxHeight: "min(700px, calc(100vh - 3rem))",
+                                boxShadow: "var(--shadow-lg)", padding: "1.2rem 1.5rem",
+                                width: "min(560px, 100%)", maxHeight: "calc(100vh - 1.5rem)",
                                 overflowY: "auto", position: "relative", pointerEvents: "all",
                                 margin: "auto",
                             }}
@@ -257,11 +302,18 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }: Props) {
                                 fontSize: "1.3rem", color: "var(--text-secondary)",
                             }}>✕</button>
 
+                            {/* ── Views with slide animation ── */}
+                            <div style={{ overflow: "hidden" }}>
+                            <AnimatePresence mode="wait" custom={animDir}>
+
                             {/* ── LOGIN ── */}
                             {view === "login" && (
-                                <>
+                                <motion.div key="login" custom={animDir}
+                                    variants={slideVariants} initial="enter" animate="center" exit="exit"
+                                    transition={slideTrans}
+                                >
                                     <h2 style={{ marginBottom: "0.25rem", fontSize: "1.4rem" }}>Welcome back 👋</h2>
-                                    <p style={{ color: "var(--text-secondary)", fontSize: "0.9rem", marginBottom: "1.5rem" }}>Sign in to your VetWorld account</p>
+                                    <p style={{ color: "var(--text-secondary)", fontSize: "0.9rem", marginBottom: "0.75rem" }}>Sign in to your VetWorld account</p>
                                     <Tabs />
                                     <form onSubmit={handleLoginSubmit} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
                                         <div><label style={labelStyle}>Email</label>
@@ -274,7 +326,7 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }: Props) {
                                                 </button>
                                             </div>
                                         </div>
-                                        <button type="button" onClick={() => goTo("forgot")} style={{
+                                        <button type="button" onClick={() => goTo("forgot", "up")} style={{
                                             alignSelf: "flex-end", background: "none", border: "none",
                                             color: "var(--vet-blue)", fontSize: "0.83rem", fontWeight: 600,
                                             cursor: "pointer", marginTop: "-0.5rem",
@@ -285,48 +337,107 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }: Props) {
                                             {isLoading ? "Please wait..." : "Sign In"}
                                         </button>
                                     </form>
-                                </>
+                                </motion.div>
                             )}
 
                             {/* ── SIGNUP ── */}
                             {view === "signup" && (
-                                <>
-                                    <h2 style={{ marginBottom: "0.25rem", fontSize: "1.4rem" }}>Create account 🐾</h2>
-                                    <p style={{ color: "var(--text-secondary)", fontSize: "0.9rem", marginBottom: "1.5rem" }}>Join VetWorld today</p>
+                                <motion.div key="signup" custom={animDir}
+                                    variants={slideVariants} initial="enter" animate="center" exit="exit"
+                                    transition={slideTrans}
+                                >
+                                    <h2 style={{ marginBottom: "0.1rem", fontSize: "1.2rem" }}>Create account 🐾</h2>
+                                    <p style={{ color: "var(--text-secondary)", fontSize: "0.8rem", marginBottom: "0.75rem" }}>Join VetWorld today</p>
                                     <Tabs />
-                                    <form onSubmit={handleSignupSubmit} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-                                        <div><label style={labelStyle}>Full Name</label>
-                                            <input type="text" required value={name} onChange={e => setName(e.target.value)} className="input" placeholder="Dr. John Doe" /></div>
-                                        <div><label style={labelStyle}>Email Address</label>
-                                            <input type="email" required value={email} onChange={e => setEmail(e.target.value)} className="input" placeholder="you@example.com" /></div>
-                                        <div><label style={labelStyle}>Phone Number</label>
-                                            <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} className="input" placeholder="+94 74 1234567" /></div>
-                                        <div><label style={labelStyle}>Delivery Address</label>
-                                            <textarea value={address} onChange={e => setAddress(e.target.value)}
-                                                className="input"
-                                                style={{ resize: "vertical", minHeight: "70px" }}
-                                                placeholder="Street, City, State..." /></div>
-                                        <div><label style={labelStyle}>Password</label>
-                                            <div style={{ position: "relative" }}>
-                                                <input type={showPassword ? "text" : "password"} required minLength={6} value={password} onChange={e => setPassword(e.target.value)} className="input" style={{ paddingRight: "2.5rem" }} placeholder="Min 6 characters" />
-                                                <button type="button" onClick={() => setShowPassword(!showPassword)} style={{ position: "absolute", right: "0.75rem", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", color: "var(--text-muted)" }}>
-                                                    {showPassword ? <EyeOffIcon /> : <EyeIcon />}
-                                                </button>
+                                    <form onSubmit={handleSignupSubmit} style={{ display: "flex", flexDirection: "column", gap: "0.65rem" }}>
+
+                                        {/* Name + Email — 2 columns */}
+                                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.6rem" }}>
+                                            <div><label style={labelStyle}>Full Name</label>
+                                                <input type="text" required value={name} onChange={e => setName(e.target.value)} className="input" placeholder="Dr. John Doe" /></div>
+                                            <div><label style={labelStyle}>Email Address</label>
+                                                <input type="email" required value={email} onChange={e => setEmail(e.target.value)} className="input" placeholder="you@example.com" /></div>
+                                        </div>
+
+                                        {/* Phone + Password — 2 columns */}
+                                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.6rem" }}>
+                                            <div>
+                                                <label style={labelStyle}>Phone Number</label>
+                                                <div style={{ display: "flex" }}>
+                                                    <span style={{
+                                                        display: "flex", alignItems: "center",
+                                                        padding: "0.45rem 0.55rem",
+                                                        background: "var(--bg)",
+                                                        border: "1.5px solid var(--border)", borderRight: "none",
+                                                        borderRadius: "var(--radius-sm) 0 0 var(--radius-sm)",
+                                                        fontSize: "0.8rem", fontWeight: 700, whiteSpace: "nowrap", userSelect: "none",
+                                                    }}>🇱🇰 +94</span>
+                                                    <input type="tel" inputMode="numeric"
+                                                        value={phoneDigits}
+                                                        onChange={e => setPhoneDigits(e.target.value.replace(/\D/g, "").slice(0, 9))}
+                                                        maxLength={9} placeholder="771234567"
+                                                        className="input"
+                                                        style={{ borderRadius: "0 var(--radius-sm) var(--radius-sm) 0", letterSpacing: "0.06em", fontSize: "0.85rem" }}
+                                                    />
+                                                </div>
+                                                <p style={{ fontSize: "0.65rem", color: "var(--text-muted)", marginTop: "0.15rem" }}>9 digits · e.g. 771234567</p>
+                                            </div>
+                                            <div><label style={labelStyle}>Password</label>
+                                                <div style={{ position: "relative" }}>
+                                                    <input type={showPassword ? "text" : "password"} required minLength={6} value={password} onChange={e => setPassword(e.target.value)} className="input" style={{ paddingRight: "2.5rem" }} placeholder="Min 6 characters" />
+                                                    <button type="button" onClick={() => setShowPassword(!showPassword)} style={{ position: "absolute", right: "0.75rem", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", color: "var(--text-muted)" }}>
+                                                        {showPassword ? <EyeOffIcon /> : <EyeIcon />}
+                                                    </button>
+                                                </div>
                                             </div>
                                         </div>
+
+                                        {/* Address — structured glass card */}
+                                        <div>
+                                            <label style={labelStyle}>📍 Delivery Address</label>
+                                            <div style={{
+                                                borderRadius: 10, overflow: "hidden",
+                                                background: "rgba(248,250,255,0.6)",
+                                                backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)",
+                                                border: "1.5px solid rgba(26,115,232,0.14)",
+                                                boxShadow: "0 2px 16px rgba(26,115,232,0.06),inset 0 1px 0 rgba(255,255,255,0.8)",
+                                                marginBottom: "0.35rem",
+                                            }}>
+                                                <div style={{ display: "flex", alignItems: "center", padding: "0 0.75rem" }}>
+                                                    <span style={{ fontSize: "0.85rem", opacity: 0.55, marginRight: "0.45rem" }}>🏠</span>
+                                                    <input type="text" value={addrLine1} onChange={e => setAddrLine1(e.target.value)}
+                                                        placeholder="Line 1 · No. 42, Galle Road"
+                                                        style={{ width: "100%", padding: "0.5rem 0", border: "none", outline: "none", background: "transparent", fontSize: "0.82rem", color: "var(--text-primary)", fontFamily: "inherit" }}
+                                                    />
+                                                </div>
+                                                <div style={{ height: 1, background: "rgba(26,115,232,0.1)", margin: "0 0.75rem" }} />
+                                                <div style={{ display: "flex", alignItems: "center", padding: "0 0.75rem" }}>
+                                                    <span style={{ fontSize: "0.85rem", opacity: 0.45, marginRight: "0.45rem" }}>🏢</span>
+                                                    <input type="text" value={addrLine2} onChange={e => setAddrLine2(e.target.value)}
+                                                        placeholder="Line 2 · Area / Apartment (optional)"
+                                                        style={{ width: "100%", padding: "0.5rem 0", border: "none", outline: "none", background: "transparent", fontSize: "0.82rem", color: "var(--text-primary)", fontFamily: "inherit" }}
+                                                    />
+                                                </div>
+                                            </div>
+                                            <DistrictDropdown value={district} onChange={setDistrict} />
+                                        </div>
+
                                         {errorMsg && <ErrorBox msg={errorMsg} />}
                                         <button type="submit" disabled={isLoading} className="btn-primary"
-                                            style={{ width: "100%", justifyContent: "center", padding: "0.85rem", opacity: isLoading ? 0.7 : 1 }}>
+                                            style={{ width: "100%", justifyContent: "center", padding: "0.7rem", opacity: isLoading ? 0.7 : 1 }}>
                                             {isLoading ? "Please wait..." : "Send Verification Code"}
                                         </button>
                                     </form>
-                                </>
+                                </motion.div>
                             )}
 
                             {/* ── SIGNUP OTP VERIFY ── */}
                             {view === "signup-otp" && (
-                                <>
-                                    <button type="button" onClick={() => { setErrorMsg(""); setSuccessMsg(""); setView("signup"); }} style={{
+                                <motion.div key="signup-otp" custom={animDir}
+                                    variants={slideVariants} initial="enter" animate="center" exit="exit"
+                                    transition={slideTrans}
+                                >
+                                    <button type="button" onClick={() => goTo("signup", "down")} style={{
                                         background: "none", border: "none", color: "var(--vet-blue)",
                                         cursor: "pointer", fontSize: "0.88rem", fontWeight: 600,
                                         marginBottom: "1rem", display: "flex", alignItems: "center", gap: "0.3rem",
@@ -352,13 +463,16 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }: Props) {
                                             {isLoading ? "Verifying..." : "Verify & Create Account"}
                                         </button>
                                     </form>
-                                </>
+                                </motion.div>
                             )}
 
                             {/* ── FORGOT PASSWORD ── */}
                             {view === "forgot" && (
-                                <>
-                                    <button type="button" onClick={() => goTo("login")} style={{
+                                <motion.div key="forgot" custom={animDir}
+                                    variants={slideVariants} initial="enter" animate="center" exit="exit"
+                                    transition={slideTrans}
+                                >
+                                    <button type="button" onClick={() => goTo("login", "down")} style={{
                                         background: "none", border: "none", color: "var(--vet-blue)",
                                         cursor: "pointer", fontSize: "0.88rem", fontWeight: 600,
                                         marginBottom: "1rem", display: "flex", alignItems: "center", gap: "0.3rem",
@@ -380,13 +494,16 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }: Props) {
                                             fontSize: "0.85rem", cursor: "pointer", textAlign: "center",
                                         }}>Already have a reset code? Enter it here →</button>
                                     </form>
-                                </>
+                                </motion.div>
                             )}
 
                             {/* ── RESET PASSWORD ── */}
                             {view === "reset" && (
-                                <>
-                                    <button type="button" onClick={() => goTo("forgot")} style={{
+                                <motion.div key="reset" custom={animDir}
+                                    variants={slideVariants} initial="enter" animate="center" exit="exit"
+                                    transition={slideTrans}
+                                >
+                                    <button type="button" onClick={() => goTo("forgot", "down")} style={{
                                         background: "none", border: "none", color: "var(--vet-blue)",
                                         cursor: "pointer", fontSize: "0.88rem", fontWeight: 600,
                                         marginBottom: "1rem", display: "flex", alignItems: "center", gap: "0.3rem",
@@ -416,8 +533,11 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }: Props) {
                                             {isLoading ? "Resetting..." : "Reset Password"}
                                         </button>
                                     </form>
-                                </>
+                                </motion.div>
                             )}
+
+                            </AnimatePresence>
+                            </div>
                         </motion.div>
                     </div>
                 </>
