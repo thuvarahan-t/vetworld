@@ -57,8 +57,6 @@ public class SecurityConfig {
                         .requestMatchers("/api/auth/**").permitAll()
                         // Health check
                         .requestMatchers("/api/health").permitAll()
-                        // Legacy admin login (kept for compatibility)
-                        .requestMatchers(HttpMethod.POST, "/api/admin/login").permitAll()
                         // Public read endpoints for store
                         .requestMatchers(HttpMethod.GET, "/api/categories/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/products/**").permitAll()

@@ -4,6 +4,8 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -16,6 +18,8 @@ import java.util.stream.Collectors;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Map<String, Object>> handleValidation(MethodArgumentNotValidException ex) {
@@ -54,13 +58,17 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<Map<String, String>> handleRuntimeException(RuntimeException ex) {
-        return ResponseEntity.badRequest().body(Map.of("error", ex.getMessage()));
+        return handleUnhandledException(ex);
     }
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, String>> handleGenericException(Exception ex) {
-        ex.printStackTrace();
-        String st = ex.getStackTrace().length > 0 ? ex.getStackTrace()[0].toString() : "";
-        return ResponseEntity.internalServerError().body(Map.of("error", "An unexpected error occurred: " + ex.toString() + " at " + st));
+        return handleUnhandledException(ex);
+    }
+
+    private ResponseEntity<Map<String, String>> handleUnhandledException(Exception ex) {
+        log.error("Unhandled exception", ex);
+        return ResponseEntity.internalServerError()
+                .body(Map.of("error", "An unexpected error occurred. Please try again later."));
     }
 }
