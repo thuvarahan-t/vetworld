@@ -19,6 +19,15 @@ export const KEYS = {
 // ── Public fetcher (no auth) ─────────────────────────────────────
 import { fetcher } from "./api";
 
+type SpringPage<T> = {
+    content: T[];
+};
+
+async function fetchPageContent<T>(endpoint: string): Promise<T[]> {
+    const page = await authFetcher<SpringPage<T>>(endpoint);
+    return page.content;
+}
+
 // ── Hooks ─────────────────────────────────────────────────────────
 
 /** Dashboard stats — refreshes every 60s */
@@ -32,7 +41,7 @@ export function useAdminStats() {
 
 /** All orders — refreshes every 30s (important for PAYMENT_REVIEW) */
 export function useAdminOrders() {
-    return useSWR<Order[]>(KEYS.orders, authFetcher, {
+    return useSWR<Order[]>(KEYS.orders, fetchPageContent<Order>, {
         revalidateOnFocus: true,
         refreshInterval: 30_000,
         dedupingInterval: 10_000,

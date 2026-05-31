@@ -169,7 +169,14 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }: Props) {
             });
             const data = await res.json();
             if (!res.ok) { setErrorMsg(data.error || "Invalid credentials."); return; }
-            localStorage.setItem("vetworld_token", data.token);
+
+            // Set token via server-side cookie route instead of localStorage
+            const tokenRes = await fetchWithTimeout("/api/auth/set-token", {
+                method: "POST", headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ token: data.token }),
+            });
+            if (!tokenRes.ok) { setErrorMsg("Failed to set session."); return; }
+
             onLoginSuccess({ name: data.name, isAdmin: data.role === "ADMIN", email: data.email });
             onClose(); reset();
         } catch (err: any) {
@@ -207,7 +214,14 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }: Props) {
             });
             const data = await res.json();
             if (!res.ok) { setErrorMsg(data.error || "Signup failed."); return; }
-            localStorage.setItem("vetworld_token", data.token);
+
+            // Set token via server-side cookie route instead of localStorage
+            const tokenRes = await fetchWithTimeout("/api/auth/set-token", {
+                method: "POST", headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ token: data.token }),
+            });
+            if (!tokenRes.ok) { setErrorMsg("Failed to set session."); return; }
+
             onLoginSuccess({ name: data.name, isAdmin: false, email: data.email });
             onClose(); reset();
         } catch (err: any) {

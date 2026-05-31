@@ -44,9 +44,15 @@ export default function Navbar() {
         };
     }, [isProfileDropdownOpen]);
 
-    const confirmLogout = () => {
+    const confirmLogout = async () => {
+        try {
+            // Clear auth cookies via backend
+            await fetch("/api/auth/set-token", { method: "DELETE" });
+        } catch (e) {
+            console.error("Failed to logout:", e);
+        }
+
         setUser(null);
-        localStorage.removeItem("vetworld_token");
         localStorage.removeItem("vetworld_user");
         // Clear persisted cart so next user doesn't see previous user's items
         localStorage.removeItem("vetworld-cart");
