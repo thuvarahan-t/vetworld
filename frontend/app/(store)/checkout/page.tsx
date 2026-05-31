@@ -9,6 +9,7 @@ import Link from "next/link";
 import Script from "next/script";
 import { motion, AnimatePresence } from "framer-motion";
 import DistrictDropdown from "@/components/ui/DistrictDropdown";
+import { uploadSignedFile, validateUploadFile } from "@/lib/cloudinaryUpload";
 
 
 
@@ -34,11 +35,8 @@ function SlipUploader({ onUploaded }: { onUploaded: (url: string) => void }) {
     const inputRef = useRef<HTMLInputElement>(null);
 
     const handleFile = (f: File) => {
-        if (!f.type.startsWith("image/") && f.type !== "application/pdf") {
-            setUploadError("Please upload an image or PDF.");
-            return;
-        }
-        if (f.size > 5 * 1024 * 1024) { setUploadError("Max file size is 5MB."); return; }
+        const validationError = validateUploadFile(f);
+        if (validationError) { setUploadError(validationError); return; }
         setUploadError("");
         setFile(f);
         setPreview(f.type.startsWith("image/") ? URL.createObjectURL(f) : "");
@@ -50,17 +48,10 @@ function SlipUploader({ onUploaded }: { onUploaded: (url: string) => void }) {
         setUploadError("");
         onUploaded(""); // clear previous
         try {
-            const formData = new FormData();
-            formData.append("file", f);
-            formData.append("upload_preset", process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET || "");
-            const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
-            if (!cloudName) throw new Error("Cloudinary not configured.");
-            const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, { method: "POST", body: formData });
-            const data = await res.json();
-            if (!res.ok) throw new Error(data.error?.message || "Upload failed.");
-            onUploaded(data.secure_url);
-        } catch (e: any) {
-            setUploadError(e.message || "Upload failed. Please try again.");
+            const uploadedUrl = await uploadSignedFile(f);
+            onUploaded(uploadedUrl);
+        } catch (e: unknown) {
+            setUploadError(e instanceof Error ? e.message : "Upload failed. Please try again.");
         } finally {
             setIsUploading(false);
         }
@@ -162,9 +153,9 @@ export default function CheckoutPage() {
 
     // ── Load profile ONCE on mount — never re-run so edited values are preserved ──
     useEffect(() => {
+        // Auth token is an HttpOnly cookie now; vetworld_user is the client-side login signal.
         const userStr = localStorage.getItem("vetworld_user");
-        const token = localStorage.getItem("vetworld_token");
-        if (!token || !userStr) { router.push("/"); return; }
+        if (!userStr) { router.push("/"); return; }
         try {
             const user = JSON.parse(userStr);
             setIsAuthenticated(true);
