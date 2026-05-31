@@ -1,15 +1,11 @@
 package com.vetworld.VetWorld.controller;
 
 import com.vetworld.VetWorld.service.OrderService;
+import com.vetworld.VetWorld.util.PayHereSignatureUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.math.BigInteger;
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.util.Map;
 
 /**
  * Receives asynchronous payment status notifications from PayHere.
@@ -43,8 +39,9 @@ public class PayHereWebhookController {
             @RequestParam(value = "payment_id", required = false) String payherePaymentId) {
 
         // 1. Verify MD5 signature
-        String computedSig = computeSignature(recMerchantId, orderId, amount, currency, statusCode);
-        if (!computedSig.equalsIgnoreCase(receivedSig)) {
+        String computedSig = PayHereSignatureUtil.notificationSignature(
+                recMerchantId, orderId, amount, currency, statusCode, merchantSecret);
+        if (!PayHereSignatureUtil.signatureMatches(computedSig, receivedSig)) {
             System.err.println("❌ PayHere signature mismatch for order: " + orderId);
             return ResponseEntity.ok("INVALID_SIGNATURE"); // always return 200 to PayHere
         }
@@ -93,26 +90,5 @@ public class PayHereWebhookController {
         }
 
         return ResponseEntity.ok("OK");
-    }
-
-    // ── MD5 hash (matches PayHere spec exactly) ───────────────────────────
-    private String computeSignature(String merchantId, String orderId,
-                                    String amount, String currency, String statusCode) {
-        String secretMd5 = md5(merchantSecret).toUpperCase();
-        String raw = merchantId + orderId + amount + currency + statusCode + secretMd5;
-        return md5(raw).toUpperCase();
-    }
-
-    private String md5(String input) {
-        try {
-            MessageDigest md = MessageDigest.getInstance("MD5");
-            byte[] digest = md.digest(input.getBytes(StandardCharsets.UTF_8));
-            BigInteger no = new BigInteger(1, digest);
-            String hash = no.toString(16);
-            while (hash.length() < 32) hash = "0" + hash;
-            return hash;
-        } catch (Exception e) {
-            throw new RuntimeException("MD5 error", e);
-        }
     }
 }

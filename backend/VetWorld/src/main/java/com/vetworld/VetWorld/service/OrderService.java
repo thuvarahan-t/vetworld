@@ -5,8 +5,11 @@ import com.vetworld.VetWorld.dto.OrderDto;
 import com.vetworld.VetWorld.dto.PlaceOrderRequest;
 import com.vetworld.VetWorld.model.*;
 import com.vetworld.VetWorld.repository.OrderRepository;
+import com.vetworld.VetWorld.repository.ProductTypeRepository;
 import com.vetworld.VetWorld.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,6 +26,7 @@ public class OrderService {
 
     private final OrderRepository orderRepository;
     private final UserRepository userRepository;
+    private final ProductTypeRepository productTypeRepository;
     private final EmailService emailService;
 
     // ── Generate unique order number ─────────────────────────────────────
@@ -42,6 +46,10 @@ public class OrderService {
             throw new RuntimeException("Order must contain at least one item.");
         }
 
+        if (req.getItems().size() > 50) {
+            throw new RuntimeException("Too many items in one order.");
+        }
+
         Order order = Order.builder()
                 .orderNumber(generateOrderNumber())
                 .user(user)
@@ -54,7 +62,18 @@ public class OrderService {
 
         BigDecimal total = BigDecimal.ZERO;
         for (var itemReq : req.getItems()) {
-            BigDecimal lineTotal = itemReq.getUnitPrice()
+            // Validate quantity bounds
+            if (itemReq.getQuantity() < 1 || itemReq.getQuantity() > 100) {
+                throw new RuntimeException("Invalid quantity for item: " + itemReq.getProductName());
+            }
+
+            // Resolve price from database — never trust client-supplied unitPrice
+            ProductType pt = productTypeRepository.findById(itemReq.getTypeId())
+                    .orElseThrow(() -> new RuntimeException("Product type not found"));
+            if (pt.isSoldOut()) {
+                throw new RuntimeException("Item is sold out");
+            }
+            BigDecimal lineTotal = pt.getPrice()
                     .multiply(BigDecimal.valueOf(itemReq.getQuantity()));
             OrderItem item = OrderItem.builder()
                     .order(order)
@@ -62,7 +81,7 @@ public class OrderService {
                     .typeId(itemReq.getTypeId())
                     .productName(itemReq.getProductName())
                     .typeName(itemReq.getTypeName())
-                    .unitPrice(itemReq.getUnitPrice())
+                    .unitPrice(pt.getPrice())
                     .quantity(itemReq.getQuantity())
                     .lineTotal(lineTotal)
                     .build();
@@ -170,11 +189,9 @@ public class OrderService {
     }
 
     // ── Get all orders (admin) ────────────────────────────────────────────
-    public List<OrderDto> getAllOrders() {
-        return orderRepository.findAllByOrderByCreatedAtDesc()
-                .stream()
-                .map(OrderDto::fromEntity)
-                .collect(Collectors.toList());
+    public Page<OrderDto> getAllOrders(Pageable pageable) {
+        return orderRepository.findAllByOrderByCreatedAtDesc(pageable)
+                .map(OrderDto::fromEntity);
     }
 
     // ── Get single order ──────────────────────────────────────────────────

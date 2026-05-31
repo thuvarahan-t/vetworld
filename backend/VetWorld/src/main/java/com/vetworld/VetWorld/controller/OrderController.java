@@ -7,7 +7,11 @@ import com.vetworld.VetWorld.model.User;
 import com.vetworld.VetWorld.repository.UserRepository;
 import com.vetworld.VetWorld.service.OrderService;
 import com.vetworld.VetWorld.service.ReceiptPdfService;
+import com.vetworld.VetWorld.util.PayHereSignatureUtil;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -16,10 +20,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
-import java.math.BigDecimal;
-import java.math.BigInteger;
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
 import java.util.List;
@@ -30,6 +30,8 @@ import java.util.Map;
 @RequestMapping("/api/orders")
 @RequiredArgsConstructor
 public class OrderController {
+
+    private static final Logger log = LoggerFactory.getLogger(OrderController.class);
 
     private final OrderService orderService;
     private final ReceiptPdfService receiptPdfService;
@@ -48,24 +50,10 @@ public class OrderController {
                 .orElseThrow(() -> new RuntimeException("User not found"));
     }
 
-    // ── MD5 helper ────────────────────────────────────────────────────────
-    private String md5(String input) {
-        try {
-            MessageDigest md = MessageDigest.getInstance("MD5");
-            byte[] digest = md.digest(input.getBytes(StandardCharsets.UTF_8));
-            BigInteger no = new BigInteger(1, digest);
-            String hash = no.toString(16);
-            while (hash.length() < 32) hash = "0" + hash;
-            return hash;
-        } catch (Exception e) {
-            throw new RuntimeException("MD5 error", e);
-        }
-    }
-
     // ── POST /api/orders → create pending order + return PayHere params ───
     @PostMapping
     public ResponseEntity<?> placeOrder(
-            @RequestBody PlaceOrderRequest req,
+            @Valid @RequestBody PlaceOrderRequest req,
             Authentication auth) {
         try {
             User user = getCurrentUser(auth);
@@ -77,21 +65,9 @@ public class OrderController {
             String amountFormatted = df.format(order.getTotalAmount());
             String currency = "LKR";
 
-            String secretMd5 = md5(merchantSecret).toUpperCase();
-            String hashInput = merchantId + order.getOrderNumber() + amountFormatted + currency + secretMd5;
-            String hash = md5(hashInput).toUpperCase();
-            System.err.println("=== PAYHERE HASH DEBUG ===");
-            System.err.println("merchant_secret_raw   : [" + merchantSecret + "]");
-            System.err.println("merchant_secret_len   : [" + merchantSecret.length() + "]");
-            System.err.println("merchant_secret_bytes : [" + java.util.Base64.getEncoder().encodeToString(merchantSecret.getBytes(StandardCharsets.UTF_8)) + "]");
-            System.err.println("merchant_id   : [" + merchantId + "]");
-            System.err.println("order_id      : [" + order.getOrderNumber() + "]");
-            System.err.println("amount        : [" + amountFormatted + "]");
-            System.err.println("currency      : [" + currency + "]");
-            System.err.println("secret_md5    : [" + secretMd5 + "]");
-            System.err.println("hash_input    : [" + hashInput + "]");
-            System.err.println("final_hash    : [" + hash + "]");
-            System.err.println("=========================");
+            String hash = PayHereSignatureUtil.checkoutHash(
+                    merchantId, order.getOrderNumber(), amountFormatted, currency, merchantSecret);
+            log.debug("PayHere hash computed for order {}", order.getOrderNumber());
 
             return ResponseEntity.ok(Map.of(
                     "orderId", order.getId(),

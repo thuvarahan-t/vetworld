@@ -6,11 +6,11 @@ import com.vetworld.VetWorld.model.OrderStatus;
 import com.vetworld.VetWorld.model.Role;
 import com.vetworld.VetWorld.model.User;
 import com.vetworld.VetWorld.repository.*;
-import com.vetworld.VetWorld.security.JwtUtil;
 import com.vetworld.VetWorld.service.*;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -24,7 +24,6 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class AdminController {
 
-    private final JwtUtil jwtUtil;
     private final CategoryService categoryService;
     private final ProductService productService;
     private final BannerService bannerService;
@@ -36,22 +35,7 @@ public class AdminController {
     private final OrderRepository orderRepository;
     private final ReceiptPdfService receiptPdfService;
 
-    @Value("${APP_ADMIN_USERNAME}")
-    private String adminUsername;
-
-    @Value("${APP_ADMIN_PASSWORD}")
-    private String adminPassword;
-
     // ── Auth ──────────────────────────────────────────────────
-
-    @PostMapping("/login")
-    public ResponseEntity<?> login(@Valid @RequestBody AdminLoginRequest request) {
-        if (adminUsername.equals(request.getUsername()) && adminPassword.equals(request.getPassword())) {
-            String token = jwtUtil.generateToken(request.getUsername(), "ADMIN");
-            return ResponseEntity.ok(Map.of("token", token));
-        }
-        return ResponseEntity.status(401).body(Map.of("error", "Invalid credentials"));
-    }
 
     // ── Stats ──────────────────────────────────────────────────
 
@@ -175,8 +159,10 @@ public class AdminController {
     // ── Orders ────────────────────────────────────────────────
 
     @GetMapping("/orders")
-    public ResponseEntity<List<OrderDto>> getAllOrders() {
-        return ResponseEntity.ok(orderService.getAllOrders());
+    public ResponseEntity<Page<OrderDto>> getAllOrders(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return ResponseEntity.ok(orderService.getAllOrders(PageRequest.of(page, size)));
     }
 
     @GetMapping("/orders/{id}")
@@ -187,7 +173,7 @@ public class AdminController {
     @PutMapping("/orders/{id}")
     public ResponseEntity<OrderDto> updateOrder(
             @PathVariable Long id,
-            @RequestBody AdminOrderUpdateRequest request) {
+            @Valid @RequestBody AdminOrderUpdateRequest request) {
         return ResponseEntity.ok(orderService.updateOrder(id, request));
     }
 

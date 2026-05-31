@@ -1,6 +1,8 @@
 package com.vetworld.VetWorld.model;
 
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
@@ -10,6 +12,8 @@ import java.math.BigDecimal;
 @Table(name = "product_types")
 @Data
 @NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class ProductType {
 
     @Id

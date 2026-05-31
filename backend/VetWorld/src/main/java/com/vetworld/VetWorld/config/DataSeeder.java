@@ -8,7 +8,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 @Configuration
@@ -17,7 +16,6 @@ public class DataSeeder {
 
         private final UserRepository userRepository;
         private final PasswordEncoder passwordEncoder;
-        private final JdbcTemplate jdbcTemplate;
 
         @Value("${APP_ADMIN_EMAIL}")
         private String adminEmail;
@@ -31,44 +29,12 @@ public class DataSeeder {
         @Bean
         public CommandLineRunner loadData() {
                 return args -> {
+                        // Seed admin user only (schema is managed by Flyway)
+                        if (adminEmail == null || adminEmail.isBlank() || adminPassword == null || adminPassword.isBlank()) {
+                                throw new IllegalStateException(
+                                                "[FATAL] APP_ADMIN_EMAIL and APP_ADMIN_PASSWORD must be configured to seed the admin user.");
+                        }
 
-                        // Ensure schema is compatible with latest product sold-out flags.
-                        jdbcTemplate.execute(
-                                "ALTER TABLE products ADD COLUMN IF NOT EXISTS is_sold_out BOOLEAN NOT NULL DEFAULT FALSE"
-                        );
-                        jdbcTemplate.execute(
-                                "ALTER TABLE product_types ADD COLUMN IF NOT EXISTS is_sold_out BOOLEAN NOT NULL DEFAULT FALSE"
-                        );
-
-                        // ---- Remove sample data (safe: targets only known seeded names) ----
-                        jdbcTemplate.update(
-                                "DELETE FROM product_types WHERE product_id IN (" +
-                                "  SELECT id FROM products WHERE name IN (" +
-                                "    'Binocular Compound Microscope'," +
-                                "    'Borosilicate Glass Test Tubes'," +
-                                "    'Surgical Scalpel Handle'," +
-                                "    'Veterinary Stethoscope'" +
-                                "  )" +
-                                ")"
-                        );
-                        jdbcTemplate.update(
-                                "DELETE FROM products WHERE name IN (" +
-                                "  'Binocular Compound Microscope'," +
-                                "  'Borosilicate Glass Test Tubes'," +
-                                "  'Surgical Scalpel Handle'," +
-                                "  'Veterinary Stethoscope'" +
-                                ")"
-                        );
-                        jdbcTemplate.update(
-                                "DELETE FROM categories WHERE name IN (" +
-                                "  'Lab Equipment', 'Surgical Instruments', 'Diagnostics'" +
-                                ")"
-                        );
-                        jdbcTemplate.update(
-                                "DELETE FROM banners WHERE image_url LIKE '%unsplash%'"
-                        );
-
-                        // ---- Seed Admin User only ----
                         if (!userRepository.existsByEmail(adminEmail)) {
                                 User admin = User.builder()
                                                 .name(adminName)
