@@ -13,9 +13,15 @@ export default function AdminSidebar() {
         setIsMounted(true);
     }, []);
 
-    const handleLogout = () => {
+    const handleLogout = async () => {
         if (confirm("Are you sure you want to log out of the admin panel?")) {
-            localStorage.removeItem("vetworld_token");
+            try {
+                // Clear the HttpOnly auth cookie server-side.
+                await fetch("/api/auth/set-token", { method: "DELETE" });
+            } catch (e) {
+                console.error("Failed to logout:", e);
+            }
+            localStorage.removeItem("vetworld_user");
             router.push("/");
         }
     };

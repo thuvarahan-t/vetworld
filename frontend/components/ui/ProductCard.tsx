@@ -3,14 +3,14 @@ import { AnimatePresence, motion } from "framer-motion";
 import Link from "next/link";
 import type { Product, ProductType } from "@/types";
 import { useCartStore } from "@/store/cartStore";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 interface Props {
     product: Product;
 }
 
-export default function ProductCard({ product }: Props) {
+function ProductCard({ product }: Props) {
     const addItem = useCartStore((s) => s.addItem);
     const [added, setAdded] = useState(false);
     const [flyAnim, setFlyAnim] = useState<{ id: number; startX: number; startY: number; endX: number; endY: number } | null>(null);
@@ -136,9 +136,9 @@ export default function ProductCard({ product }: Props) {
             whileHover={{ y: -6 }}
             transition={{ duration: 0.3, ease: [0.25, 0.1, 0.25, 1] }}
             style={{
-                background: "rgba(255, 255, 255, 0.45)",
-                backdropFilter: "blur(12px)",
-                WebkitBackdropFilter: "blur(12px)",
+                // Solid translucent bg instead of backdrop-filter: blur — blur is very
+                // expensive to paint and was running on every card in the grid.
+                background: "rgba(255, 255, 255, 0.85)",
                 borderRadius: "var(--radius-lg)",
                 border: "1px solid rgba(255, 255, 255, 0.4)",
                 boxShadow: "0 8px 32px 0 rgba(31, 38, 135, 0.05)",
@@ -150,12 +150,12 @@ export default function ProductCard({ product }: Props) {
                 zIndex: isTypeDropdownOpen ? 60 : 1,
             }}
             onMouseEnter={(e) => {
-                (e.currentTarget as HTMLDivElement).style.background = "rgba(255, 255, 255, 0.75)";
+                (e.currentTarget as HTMLDivElement).style.background = "rgba(255, 255, 255, 0.97)";
                 (e.currentTarget as HTMLDivElement).style.boxShadow = "0 12px 40px rgba(0, 0, 0, 0.1)";
                 (e.currentTarget as HTMLDivElement).style.borderColor = "rgba(255, 255, 255, 0.7)";
             }}
             onMouseLeave={(e) => {
-                (e.currentTarget as HTMLDivElement).style.background = "rgba(255, 255, 255, 0.45)";
+                (e.currentTarget as HTMLDivElement).style.background = "rgba(255, 255, 255, 0.85)";
                 (e.currentTarget as HTMLDivElement).style.boxShadow = "0 8px 32px 0 rgba(31, 38, 135, 0.05)";
                 (e.currentTarget as HTMLDivElement).style.borderColor = "rgba(255, 255, 255, 0.4)";
             }}
@@ -206,12 +206,14 @@ export default function ProductCard({ product }: Props) {
                             <img
                                 src={selectedType?.imageUrl || product.imageUrl}
                                 alt={product.name}
-                                style={{ 
-                                    width: "100%", 
-                                    height: "100%", 
+                                loading="lazy"
+                                decoding="async"
+                                style={{
+                                    width: "100%",
+                                    height: "100%",
                                     objectFit: "contain",
                                     padding: "0.5rem",
-                                    transition: "transform 0.6s cubic-bezier(0.2, 0, 0.2, 1)" 
+                                    transition: "transform 0.6s cubic-bezier(0.2, 0, 0.2, 1)"
                                 }}
                             />
                         ) : (
@@ -875,3 +877,6 @@ export default function ProductCard({ product }: Props) {
         </motion.div>
     );
 }
+
+// Memoized: cards never need to re-render unless their own product prop changes.
+export default memo(ProductCard);

@@ -11,21 +11,24 @@ import com.vetworld.VetWorld.model.Role;
 import com.vetworld.VetWorld.model.User;
 import com.vetworld.VetWorld.repository.UserRepository;
 import com.vetworld.VetWorld.security.JwtUtil;
+import com.vetworld.VetWorld.service.AuthRateLimitService;
 import com.vetworld.VetWorld.service.EmailService;
+import com.vetworld.VetWorld.service.OtpService;
+import com.vetworld.VetWorld.service.PasswordResetService;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
-import com.vetworld.VetWorld.service.OtpService;
-
-import java.time.LocalDateTime;
 import java.util.Map;
-import java.util.Random;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -38,13 +41,20 @@ public class AuthController {
         private final JwtUtil jwtUtil;
         private final EmailService emailService;
         private final OtpService otpService;
+        private final PasswordResetService passwordResetService;
+        private final AuthRateLimitService authRateLimitService;
 
         /**
          * POST /api/auth/send-signup-otp
          * Sends an OTP for email verification during signup.
          */
         @PostMapping("/send-signup-otp")
-        public ResponseEntity<?> sendSignupOtp(@RequestBody SendSignupOtpRequest request) {
+        public ResponseEntity<?> sendSignupOtp(@Valid @RequestBody SendSignupOtpRequest request,
+                        HttpServletRequest httpRequest) {
+                if (isRateLimited("send-signup-otp", request.getEmail(), httpRequest)) {
+                        return tooManyRequests();
+                }
+
                 if (userRepository.existsByEmail(request.getEmail())) {
                         return ResponseEntity.status(HttpStatus.CONFLICT)
                                         .body(Map.of("error", "Email is already registered. Please log in."));
@@ -76,7 +86,11 @@ public class AuthController {
          * Registers a new regular user in the system after verifying OTP.
          */
         @PostMapping("/signup")
-        public ResponseEntity<?> signup(@RequestBody SignupRequest request) {
+        public ResponseEntity<?> signup(@Valid @RequestBody SignupRequest request, HttpServletRequest httpRequest) {
+                if (isRateLimited("signup", request.getEmail(), httpRequest)) {
+                        return tooManyRequests();
+                }
+
                 // Check if email already taken
                 if (userRepository.existsByEmail(request.getEmail())) {
                         return ResponseEntity
@@ -122,7 +136,11 @@ public class AuthController {
          * Authenticates a user (regular or admin) and returns a JWT.
          */
         @PostMapping("/login")
-        public ResponseEntity<?> login(@RequestBody AuthRequest request) {
+        public ResponseEntity<?> login(@Valid @RequestBody AuthRequest request, HttpServletRequest httpRequest) {
+                if (isRateLimited("login", request.getEmail(), httpRequest)) {
+                        return tooManyRequests();
+                }
+
                 try {
                         // This will throw BadCredentialsException if invalid
                         authenticationManager.authenticate(
@@ -184,16 +202,12 @@ public class AuthController {
          * Updates currently authenticated user profile.
          */
         @PutMapping("/profile")
-        public ResponseEntity<?> updateProfile(@RequestHeader("Authorization") String authHeader, @RequestBody ProfileUpdateRequest request) {
-                if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+        public ResponseEntity<?> updateProfile(Authentication auth, @Valid @RequestBody ProfileUpdateRequest request) {
+                if (auth == null || !auth.isAuthenticated() || auth instanceof AnonymousAuthenticationToken) {
                         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                                         .body(Map.of("error", "No token provided."));
                 }
-                String token = authHeader.substring(7);
-                if (!jwtUtil.validateToken(token)) {
-                        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Invalid token."));
-                }
-                String email = jwtUtil.extractUsername(token);
+                String email = auth.getName();
                 User user = userRepository.findByEmail(email)
                                 .orElseThrow(() -> new RuntimeException("User not found"));
 
@@ -205,7 +219,6 @@ public class AuthController {
 
                 return ResponseEntity.ok(
                                 AuthResponse.builder()
-                                                .token(token)
                                                 .name(user.getName())
                                                 .email(user.getEmail())
                                                 .role(user.getRole().name())
@@ -219,7 +232,12 @@ public class AuthController {
          * Generates a 6-digit reset code valid for 15 minutes.
          */
         @PostMapping("/forgot-password")
-        public ResponseEntity<?> forgotPassword(@RequestBody ForgotPasswordRequest request) {
+        public ResponseEntity<?> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request,
+                        HttpServletRequest httpRequest) {
+                if (isRateLimited("forgot-password", request.getEmail(), httpRequest)) {
+                        return tooManyRequests();
+                }
+
                 User user = userRepository.findByEmail(request.getEmail())
                                 .orElse(null);
 
@@ -229,11 +247,15 @@ public class AuthController {
                                         "message", "If this email is registered, a reset code has been sent."));
                 }
 
-                // Generate a 6-digit OTP
-                String code = String.format("%06d", new Random().nextInt(999999));
-                user.setResetToken(code);
-                user.setResetTokenExpiry(LocalDateTime.now().plusMinutes(15));
-                userRepository.save(user);
+                // Rate limit: max 3 reset requests per user per 15 minutes
+                if (passwordResetService.isRateLimited(user.getId())) {
+                        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                                        .body(Map.of("error",
+                                                        "Too many reset requests. Please wait a few minutes and try again."));
+                }
+
+                // Generate a 6-digit code; only its SHA-256 hash is persisted
+                String code = passwordResetService.createToken(user.getId());
 
                 // Send the OTP via Resend
                 String subject = "VetWorld - Password Reset Code";
@@ -262,33 +284,38 @@ public class AuthController {
          * Validates the OTP code and sets a new password.
          */
         @PostMapping("/reset-password")
-        public ResponseEntity<?> resetPassword(@RequestBody ResetPasswordRequest request) {
+        public ResponseEntity<?> resetPassword(@Valid @RequestBody ResetPasswordRequest request,
+                        HttpServletRequest httpRequest) {
+                if (isRateLimited("reset-password", request.getEmail(), httpRequest)) {
+                        return tooManyRequests();
+                }
+
                 User user = userRepository.findByEmail(request.getEmail())
                                 .orElse(null);
 
-                if (user == null || user.getResetToken() == null) {
+                if (user == null) {
                         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                                         .body(Map.of("error", "Invalid reset request."));
                 }
 
-                // Check code matches
-                if (!user.getResetToken().equals(request.getResetCode())) {
+                // Validate the code against an unused, unexpired token (marks it used on success)
+                if (!passwordResetService.consumeToken(user.getId(), request.getResetCode())) {
                         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                                        .body(Map.of("error", "Invalid reset code."));
+                                        .body(Map.of("error", "Invalid or expired reset code. Please request a new one."));
                 }
 
-                // Check code hasn't expired (15 minutes)
-                if (user.getResetTokenExpiry().isBefore(LocalDateTime.now())) {
-                        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                                        .body(Map.of("error", "Reset code has expired. Please request a new one."));
-                }
-
-                // Set new password and clear reset token
                 user.setPassword(passwordEncoder.encode(request.getNewPassword()));
-                user.setResetToken(null);
-                user.setResetTokenExpiry(null);
                 userRepository.save(user);
 
                 return ResponseEntity.ok(Map.of("message", "Password reset successfully! You can now login."));
+        }
+
+        private boolean isRateLimited(String endpoint, String email, HttpServletRequest request) {
+                return !authRateLimitService.tryConsume(endpoint, email, request);
+        }
+
+        private ResponseEntity<?> tooManyRequests() {
+                return ResponseEntity.status(429)
+                                .body(Map.of("error", "Too many requests. Please try again later."));
         }
 }

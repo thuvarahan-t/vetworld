@@ -6,6 +6,7 @@ import { userApi } from "@/lib/api";
 import type { Order } from "@/types";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
+import { uploadSignedFile, validateUploadFile } from "@/lib/cloudinaryUpload";
 
 // ─── Status helpers ────────────────────────────────────────────────────────
 function statusColor(status: string): { bg: string; text: string } {
@@ -76,12 +77,9 @@ function PaymentSlipUploader({ orderId, onSuccess }: { orderId: number; onSucces
     const inputRef = useRef<HTMLInputElement>(null);
 
     const handleFile = (f: File) => {
-        if (!f.type.startsWith("image/") && f.type !== "application/pdf") {
-            setUploadError("Please upload an image (JPG, PNG) or PDF file.");
-            return;
-        }
-        if (f.size > 5 * 1024 * 1024) {
-            setUploadError("File must be under 5MB.");
+        const validationError = validateUploadFile(f);
+        if (validationError) {
+            setUploadError(validationError);
             return;
         }
         setUploadError("");
@@ -96,17 +94,7 @@ function PaymentSlipUploader({ orderId, onSuccess }: { orderId: number; onSucces
     const uploadToCloudinary = async (f: File): Promise<string> => {
         setIsUploading(true);
         try {
-            const formData = new FormData();
-            formData.append("file", f);
-            formData.append("upload_preset", process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET || "");
-            const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
-            if (!cloudName) throw new Error("Cloudinary not configured");
-            const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/auto/upload`, {
-                method: "POST", body: formData,
-            });
-            const data = await res.json();
-            if (!res.ok) throw new Error(data.error?.message || "Upload failed");
-            return data.secure_url;
+            return await uploadSignedFile(f);
         } finally {
             setIsUploading(false);
         }
@@ -251,9 +239,10 @@ export default function MyOrdersPage() {
     };
 
     useEffect(() => {
-        const token = typeof window !== "undefined"
-                        ? localStorage.getItem("vetworld_token") : null;
-        if (!token) { router.push("/"); return; }
+        // Auth token is an HttpOnly cookie now; vetworld_user is the client-side login signal.
+        const userStr = typeof window !== "undefined"
+                        ? localStorage.getItem("vetworld_user") : null;
+        if (!userStr) { router.push("/"); return; }
 
         let pollTimer: ReturnType<typeof setInterval> | null = null;
         let pollCount = 0;

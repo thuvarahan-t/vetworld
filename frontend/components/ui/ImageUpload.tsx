@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect } from "react";
 import { motion } from "framer-motion";
+import { uploadSignedFile, validateUploadFile } from "@/lib/cloudinaryUpload";
 
 interface ImageUploadProps {
     onUpload: (url: string) => void;
@@ -23,15 +24,9 @@ export default function ImageUpload({
     const [error, setError] = useState<string | null>(null);
 
     const uploadToCloudinary = async (file: File) => {
-        // Basic validation
-        if (!file.type.startsWith("image/") && file.type !== "application/pdf") {
-            setError("Please upload an image or PDF file");
-            return;
-        }
-
-        // 5MB limit
-        if (file.size > 5 * 1024 * 1024) {
-            setError("Image size should be less than 5MB");
+        const validationError = validateUploadFile(file);
+        if (validationError) {
+            setError(validationError);
             return;
         }
 
@@ -39,30 +34,11 @@ export default function ImageUpload({
             setIsUploading(true);
             setError(null);
 
-            const formData = new FormData();
-            formData.append("file", file);
-            formData.append("upload_preset", process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET || "");
-
-            const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
-            if (!cloudName) {
-                throw new Error("Cloudinary configuration missing");
-            }
-
-            const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/auto/upload`, {
-                method: "POST",
-                body: formData,
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error?.message || "Upload failed");
-            }
-
-            const data = await response.json();
-            onUpload(data.secure_url);
-        } catch (err: any) {
+            const uploadedUrl = await uploadSignedFile(file);
+            onUpload(uploadedUrl);
+        } catch (err: unknown) {
             console.error("Upload error:", err);
-            setError(err.message || "Failed to upload image");
+            setError(err instanceof Error ? err.message : "Failed to upload image");
         } finally {
             setIsUploading(false);
         }

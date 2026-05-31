@@ -268,9 +268,20 @@ img {
   gap: 1.25rem;
 }
 
+/* Skip rendering/layout/paint for cards outside the viewport (native virtualization).
+   contain-intrinsic-size reserves space so the scrollbar stays stable. */
+.product-results-grid > * {
+  content-visibility: auto;
+  contain-intrinsic-size: 380px;
+}
+
 @media (max-width: 640px) {
   .product-results-grid {
     grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
     gap: 0.75rem;
+  }
+
+  .product-results-grid > * {
+    contain-intrinsic-size: 300px;
   }
 }

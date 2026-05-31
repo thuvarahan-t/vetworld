@@ -1,0 +1,31 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(./mvnw -q compile -o)",
+      "Bash(./mvnw -q compile)",
+      "Bash(./mvnw -q compile test-compile)",
+      "Bash(./mvnw.cmd -q compile)",
+      "Bash(mvn -q compile)",
+      "Bash(npx tsc *)",
+      "Bash(cmd /c \"mvnw.cmd -q compile\")",
+      "Bash(echo \"EXIT=$?\")",
+      "PowerShell(Set-Location \"c:\\\\Users\\\\Acer\\\\Desktop\\\\work\\\\vetworldV2\\\\vetworld\\\\frontend\"; npx tsc --noEmit; \"TSC_EXIT=$LASTEXITCODE\")",
+      "PowerShell(Set-Location \"c:\\\\Users\\\\Acer\\\\Desktop\\\\work\\\\vetworldV2\\\\vetworld\\\\backend\\\\VetWorld\"; .\\\\mvnw.cmd -q compile; \"MVN_EXIT=$LASTEXITCODE\")",
+      "PowerShell(Set-Location \"c:\\\\Users\\\\Acer\\\\Desktop\\\\work\\\\vetworldV2\\\\vetworld\\\\frontend\"; npx tsc --noEmit; \"TSC_EXIT=$LASTEXITCODE\"; npx next lint --max-warnings 0 2>&1 | Select-Object -Last 30; \"LINT_EXIT=$LASTEXITCODE\")",
+      "PowerShell(Set-Location \"c:\\\\Users\\\\Acer\\\\Desktop\\\\work\\\\vetworldV2\\\\vetworld\\\\frontend\"; npx next lint 2>&1 | Select-Object -Last 40; \"LINT_EXIT=$LASTEXITCODE\")",
+      "PowerShell(Set-Location \"c:\\\\Users\\\\Acer\\\\Desktop\\\\work\\\\vetworldV2\\\\vetworld\\\\frontend\"; npm run lint 2>&1 | Select-Object -Last 40; \"LINT_EXIT=$LASTEXITCODE\")",
+      "PowerShell(Set-Location \"c:\\\\Users\\\\Acer\\\\Desktop\\\\work\\\\vetworldV2\\\\vetworld\\\\backend\\\\VetWorld\"; .\\\\mvnw.cmd -q test-compile; \"MVN_TESTCOMPILE_EXIT=$LASTEXITCODE\")",
+      "Bash(rm -f /tmp/backend.log)",
+      "Bash(nohup cmd //c \"mvnw.cmd spring-boot:run\")",
+      "Bash(echo \"started pid $!\")",
+      "Bash(grep -qE \"Started VetWorldApplication|APPLICATION FAILED TO START|ERROR|Exception\" /tmp/backend.log)",
+      "Bash(break)",
+      "Read(//tmp/**)",
+      "PowerShell(curl.exe -s -o NUL -w \"status %{http_code}  total %{time_total}s\\\\n\" http://localhost:3000/category/all)",
+      "PowerShell(curl.exe -s -o NUL -w \"status %{http_code}  total %{time_total}s\\\\n\" http://localhost:8080/api/products)",
+      "PowerShell(\"--- /category/all \\(1st = compile\\) ---\")",
+      "PowerShell(\"--- /category/all \\(2nd = warm\\) ---\")",
+      "PowerShell(\"--- direct backend /api/products ---\")"
+    ]
+  }
+}

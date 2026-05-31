@@ -1,28 +1,37 @@
 package com.vetworld.VetWorld.service;
 
+import com.vetworld.VetWorld.model.OtpToken;
+import com.vetworld.VetWorld.repository.OtpTokenRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.security.SecureRandom;
 import java.time.LocalDateTime;
-import java.util.Map;
-import java.util.Random;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.Locale;
 
 /**
- * In-memory OTP store for email verification during signup.
- * Stores email -> {code, expiry} pairs with 15-minute TTL.
+ * Database-backed OTP store for email verification during signup.
  */
 @Service
+@RequiredArgsConstructor
 public class OtpService {
 
-    private record OtpEntry(String code, LocalDateTime expiry) {
-    }
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
+    private static final int OTP_TTL_MINUTES = 15;
 
-    private final Map<String, OtpEntry> store = new ConcurrentHashMap<>();
+    private final OtpTokenRepository otpTokenRepository;
 
     /** Generate and store a 6-digit OTP for the given email. Returns the code. */
+    @Transactional
     public String generateOtp(String email) {
-        String code = String.format("%06d", new Random().nextInt(999999));
-        store.put(email.toLowerCase(), new OtpEntry(code, LocalDateTime.now().plusMinutes(15)));
+        // range 0-999999 gives uniform distribution across all 6-digit codes
+        String code = String.format("%06d", SECURE_RANDOM.nextInt(1_000_000));
+        otpTokenRepository.save(OtpToken.builder()
+                .email(normalizeEmail(email))
+                .code(code)
+                .expiresAt(LocalDateTime.now().plusMinutes(OTP_TTL_MINUTES))
+                .build());
         return code;
     }
 
@@ -30,23 +39,28 @@ public class OtpService {
      * Validate OTP. Returns true if code matches and has not expired. Removes on
      * success.
      */
+    @Transactional
     public boolean verifyOtp(String email, String code) {
-        OtpEntry entry = store.get(email.toLowerCase());
-        if (entry == null)
+        String normalizedEmail = normalizeEmail(email);
+        OtpToken token = otpTokenRepository.findById(normalizedEmail).orElse(null);
+        if (token == null)
             return false;
-        if (entry.expiry().isBefore(LocalDateTime.now())) {
-            store.remove(email.toLowerCase());
+        if (token.getExpiresAt().isBefore(LocalDateTime.now())) {
+            otpTokenRepository.delete(token);
             return false;
         }
-        if (!entry.code().equals(code))
+        if (!token.getCode().equals(code))
             return false;
-        store.remove(email.toLowerCase()); // one-time use
+        otpTokenRepository.delete(token); // one-time use
         return true;
     }
 
     /** Check if an unexpired OTP exists for this email. */
     public boolean hasOtp(String email) {
-        OtpEntry entry = store.get(email.toLowerCase());
-        return entry != null && entry.expiry().isAfter(LocalDateTime.now());
+        return otpTokenRepository.existsByEmailAndExpiresAtAfter(normalizeEmail(email), LocalDateTime.now());
+    }
+
+    private String normalizeEmail(String email) {
+        return email.trim().toLowerCase(Locale.ROOT);
     }
 }
