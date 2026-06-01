@@ -177,7 +177,7 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }: Props) {
             });
             if (!tokenRes.ok) { setErrorMsg("Failed to set session."); return; }
 
-            onLoginSuccess({ name: data.name, isAdmin: data.role === "ADMIN", email: data.email });
+            onLoginSuccess({ name: data.name, isAdmin: data.role === "ADMIN", email: data.email, phone: data.phone, address: data.address });
             onClose(); reset();
         } catch (err: any) {
             setErrorMsg(err?.name === "AbortError" ? "Request timed out. Please try again." : "Network error. Make sure the server is running.");
@@ -222,7 +222,7 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }: Props) {
             });
             if (!tokenRes.ok) { setErrorMsg("Failed to set session."); return; }
 
-            onLoginSuccess({ name: data.name, isAdmin: false, email: data.email });
+            onLoginSuccess({ name: data.name, isAdmin: false, email: data.email, phone: data.phone, address: data.address });
             onClose(); reset();
         } catch (err: any) {
             setErrorMsg(err?.name === "AbortError" ? "Request timed out. Please try again." : "Network error. Make sure the server is running.");

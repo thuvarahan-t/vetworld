@@ -72,13 +72,13 @@ public class AuthController {
                 boolean sent = emailService.sendEmail(request.getEmail(), subject, body);
                 if (!sent) {
                         System.out.println("🔑 Fallback Signup OTP for " + request.getEmail() + ": " + code);
-                        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                                        .body(Map.of("error",
-                                                        "Could not send verification email. Please try again later."));
                 }
 
                 return ResponseEntity
-                                .ok(Map.of("message", "A verification code has been sent to " + request.getEmail()));
+                                .ok(Map.of("message", sent
+                                                ? "A verification code has been sent to " + request.getEmail()
+                                                : "Verification code generated for " + request.getEmail()
+                                                                + ". Please check your email or try again later."));
         }
 
         /**
@@ -173,22 +173,17 @@ public class AuthController {
          * Returns currently authenticated user info from token.
          */
         @GetMapping("/me")
-        public ResponseEntity<?> getCurrentUser(@RequestHeader("Authorization") String authHeader) {
-                if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+        public ResponseEntity<?> getCurrentUser(Authentication auth) {
+                if (auth == null || !auth.isAuthenticated() || auth instanceof AnonymousAuthenticationToken) {
                         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                                         .body(Map.of("error", "No token provided."));
                 }
-                String token = authHeader.substring(7);
-                if (!jwtUtil.validateToken(token)) {
-                        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Invalid token."));
-                }
-                String email = jwtUtil.extractUsername(token);
+                String email = auth.getName();
                 User user = userRepository.findByEmail(email)
                                 .orElseThrow(() -> new RuntimeException("User not found"));
 
                 return ResponseEntity.ok(
                                 AuthResponse.builder()
-                                                .token(token)
                                                 .name(user.getName())
                                                 .email(user.getEmail())
                                                 .role(user.getRole().name())

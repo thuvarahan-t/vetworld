@@ -8,21 +8,44 @@ interface Props {
     banners: Banner[];
 }
 
-function normalizeRedirectLink(link?: string): string {
-    if (!link) return "";
+interface ResolvedLink {
+    href: string;
+    external: boolean;
+}
+
+function resolveRedirectLink(link?: string): ResolvedLink | null {
+    if (!link) return null;
 
     const trimmed = link.trim();
-    if (!trimmed) return "";
+    if (!trimmed) return null;
 
     // Keep compatibility with legacy banner links that pointed to /home.
-    if (trimmed === "/home" || trimmed === "home") return "/";
+    if (trimmed === "/home" || trimmed === "home" || trimmed === "/") {
+        return { href: "/", external: false };
+    }
 
-    return trimmed;
+    // Absolute external URLs (http/https) open as a real navigation.
+    if (/^https?:\/\//i.test(trimmed)) {
+        return { href: trimmed, external: true };
+    }
+
+    // Internal app routes.
+    if (trimmed.startsWith("/")) {
+        return { href: trimmed, external: false };
+    }
+
+    // Other protocols (mailto:, tel:, etc.) are treated as external.
+    if (/^[a-z][a-z0-9+.-]*:/i.test(trimmed)) {
+        return { href: trimmed, external: true };
+    }
+
+    // Bare domains like "example.com/promo" — assume external https.
+    return { href: `https://${trimmed}`, external: true };
 }
 
 export default function BannerCarousel({ banners }: Props) {
     const [current, setCurrent] = useState(0);
-    const currentRedirectLink = normalizeRedirectLink(banners[current]?.redirectLink);
+    const currentRedirectLink = resolveRedirectLink(banners[current]?.redirectLink);
 
     useEffect(() => {
         if (banners.length <= 1) return;
@@ -89,9 +112,20 @@ export default function BannerCarousel({ banners }: Props) {
                     style={{ position: "absolute", inset: 0 }}
                 >
                     {currentRedirectLink ? (
-                        <Link href={currentRedirectLink} style={{ display: "block", height: "100%" }}>
-                            <img src={banners[current].imageUrl} alt="Banner" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                        </Link>
+                        currentRedirectLink.external ? (
+                            <a
+                                href={currentRedirectLink.href}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                style={{ display: "block", height: "100%" }}
+                            >
+                                <img src={banners[current].imageUrl} alt="Banner" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                            </a>
+                        ) : (
+                            <Link href={currentRedirectLink.href} style={{ display: "block", height: "100%" }}>
+                                <img src={banners[current].imageUrl} alt="Banner" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                            </Link>
+                        )
                     ) : (
                         <img src={banners[current].imageUrl} alt="Banner" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                     )}

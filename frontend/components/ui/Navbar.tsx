@@ -8,6 +8,7 @@ import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import AuthModal, { User } from "./AuthModal";
 import ProfileModal from "./ProfileModal";
+import { userApi } from "@/lib/api";
 
 export default function Navbar() {
     const router = useRouter();
@@ -59,17 +60,36 @@ export default function Navbar() {
         setShowLogoutConfirm(false);
     };
 
-    // Load from local storage on mount
+    // Load from local storage on mount, then refresh full profile (phone/address)
+    // from the backend so "My Profile" always reflects the saved account details.
     useEffect(() => {
         setIsMounted(true);
         const storedUser = localStorage.getItem("vetworld_user");
-        if (storedUser) {
-            try {
-                setUser(JSON.parse(storedUser));
-            } catch (e) {
-                console.error("Failed to parse user from local storage", e);
-            }
+        if (!storedUser) return;
+
+        let parsed: User | null = null;
+        try {
+            parsed = JSON.parse(storedUser);
+            setUser(parsed);
+        } catch (e) {
+            console.error("Failed to parse user from local storage", e);
+            return;
         }
+
+        // Re-hydrate from the server using the auth cookie. Ignore failures
+        // (e.g. expired session) — fetcher already handles 401 cleanup.
+        userApi.getMe()
+            .then((me) => {
+                setUser((prev) => ({
+                    ...prev,
+                    name: me.name,
+                    email: me.email,
+                    isAdmin: me.role === "ADMIN",
+                    phone: me.phone,
+                    address: me.address,
+                }));
+            })
+            .catch(() => { /* keep localStorage copy */ });
     }, []);
 
     // Save to local storage when user changes

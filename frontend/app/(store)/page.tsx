@@ -99,17 +99,18 @@ export default async function HomePage() {
         </section>
       )}
 
-      {/* Empty state – backend not connected yet */}
+      {/* Empty state – backend reachable but no catalog data yet */}
       {(topSelling as Product[]).length === 0 &&
         (recent as Product[]).length === 0 &&
         (categories as Category[]).length === 0 && (
           <section className="section container-main" style={{ textAlign: "center", padding: "4rem 2rem" }}>
             <div style={{ fontSize: "4rem", marginBottom: "1rem" }}>🚧</div>
             <h2 style={{ fontSize: "1.5rem", fontWeight: 700, color: "var(--text-primary)", marginBottom: "0.5rem" }}>
-              Backend Not Connected
+              No Catalog Data Yet
             </h2>
             <p style={{ color: "var(--text-secondary)", marginBottom: "1.5rem" }}>
-              Start the Spring Boot backend at <code style={{ background: "var(--border)", padding: "2px 6px", borderRadius: 4 }}>localhost:8080</code> to see live products.
+              The backend is reachable, but it is not returning any products or categories yet.
+              Add catalog data in the admin panel or seed the database to populate this page.
             </p>
             <Link href="/cart" className="btn-secondary">
               View Cart →
