@@ -25,7 +25,9 @@ import static org.junit.jupiter.api.Assertions.*;
 @TestPropertySource(properties = {
     "spring.jpa.hibernate.ddl-auto=create-drop",
     "spring.datasource.hikari.maximum-pool-size=2",
-    "jwt.secret=test_jwt_secret_key"
+    "app.jwt.secret=test_jwt_secret_key_minimum_256_bits_long_xxxxxxxxx", // must be 32+ chars for HS256
+    "APP_ADMIN_EMAIL=admin@test.com",
+    "APP_ADMIN_PASSWORD=TestAdminPass123"
 })
 public class AuthControllerTest {
 

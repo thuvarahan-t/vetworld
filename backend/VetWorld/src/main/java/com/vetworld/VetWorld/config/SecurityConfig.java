@@ -49,6 +49,11 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .cors(Customizer.withDefaults())
+                // CSRF is disabled here because protection is provided by the auth
+                // cookie's SameSite=Strict attribute (see set-token route): a
+                // cross-site forged request cannot carry vetworld_token, so it
+                // arrives unauthenticated and is rejected. Auth is stateless (JWT in
+                // cookie), so there is no server session for an attacker to ride.
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authenticationProvider(authenticationProvider())

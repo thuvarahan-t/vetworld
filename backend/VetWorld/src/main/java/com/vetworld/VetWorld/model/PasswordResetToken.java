@@ -5,6 +5,8 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDateTime;
 
@@ -24,7 +26,8 @@ public class PasswordResetToken {
     private Long userId;
 
     /** SHA-256 hex digest of the plain reset code — the plain code is never stored. */
-    @Column(name = "token_hash", nullable = false, columnDefinition = "char(64)")
+    @JdbcTypeCode(SqlTypes.CHAR)
+    @Column(name = "token_hash", nullable = false, length = 64)
     private String tokenHash;
 
     @Column(name = "expires_at", nullable = false)

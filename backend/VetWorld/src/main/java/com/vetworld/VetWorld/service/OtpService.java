@@ -49,8 +49,15 @@ public class OtpService {
             otpTokenRepository.delete(token);
             return false;
         }
-        if (!token.getCode().equals(code))
+        if (!token.getCode().equals(code)) {
+            if (token.getAttempts() >= 4) {
+                otpTokenRepository.delete(token);
+                return false;
+            }
+            token.setAttempts(token.getAttempts() + 1);
+            otpTokenRepository.save(token);
             return false;
+        }
         otpTokenRepository.delete(token); // one-time use
         return true;
     }

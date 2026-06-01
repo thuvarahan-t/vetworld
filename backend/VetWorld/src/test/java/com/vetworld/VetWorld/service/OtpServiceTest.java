@@ -78,6 +78,19 @@ public class OtpServiceTest {
     }
 
     @Test
+    void testVerifyOtp_MultipleIncorrectCodes_DeletesAfterFiveFailures() {
+        otpService.generateOtp(TEST_EMAIL);
+
+        for (int i = 0; i < 4; i++) {
+            assertFalse(otpService.verifyOtp(TEST_EMAIL, "999999"));
+            assertTrue(otpTokenRepository.existsById(TEST_EMAIL));
+        }
+
+        assertFalse(otpService.verifyOtp(TEST_EMAIL, "999999"));
+        assertFalse(otpTokenRepository.existsById(TEST_EMAIL));
+    }
+
+    @Test
     void testVerifyOtp_NonExistentEmail_ReturnsFalse() {
         boolean result = otpService.verifyOtp("nonexistent@example.com", "123456");
 
