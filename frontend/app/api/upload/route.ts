@@ -20,11 +20,20 @@ type UploadRequest = {
 };
 
 export async function POST(request: Request) {
-    const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
+    // Cloud name can come from the server-only var or the public one used by the
+    // original unsigned-upload setup — accept either so existing config keeps working.
+    const cloudName = process.env.CLOUDINARY_CLOUD_NAME || process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
     const apiKey = process.env.CLOUDINARY_API_KEY;
     const apiSecret = process.env.CLOUDINARY_API_SECRET;
+    const uploadPreset = process.env.CLOUDINARY_UPLOAD_PRESET || process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET;
 
-    if (!cloudName || !apiKey || !apiSecret) {
+    // Signed uploads (preferred) need the API key + secret. If those aren't
+    // available, fall back to an unsigned upload preset. We need a cloud name
+    // plus at least one of those two mechanisms to proceed.
+    const canSign = Boolean(cloudName && apiKey && apiSecret);
+    const canUnsigned = Boolean(cloudName && uploadPreset);
+
+    if (!canSign && !canUnsigned) {
         return NextResponse.json({ error: "Upload service is not configured." }, { status: 500 });
     }
 
@@ -46,6 +55,21 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: "File must be 5MB or smaller." }, { status: 400 });
     }
 
+    const uploadUrl = `https://api.cloudinary.com/v1_1/${cloudName}/auto/upload`;
+    const folder = process.env.CLOUDINARY_UPLOAD_FOLDER || "vetworld/uploads";
+
+    // ── Unsigned upload: hand the client the preset; Cloudinary validates it. ──
+    if (!canSign) {
+        return NextResponse.json({
+            uploadUrl,
+            params: {
+                upload_preset: uploadPreset,
+                folder,
+            },
+        });
+    }
+
+    // ── Signed upload: sign the request server-side so secrets never reach the client. ──
     cloudinary.config({
         cloud_name: cloudName,
         api_key: apiKey,
@@ -54,16 +78,15 @@ export async function POST(request: Request) {
     });
 
     const timestamp = Math.floor(Date.now() / 1000);
-    const folder = process.env.CLOUDINARY_UPLOAD_FOLDER || "vetworld/uploads";
     const signedParams = {
         allowed_formats: CLOUDINARY_ALLOWED_FORMATS,
         folder,
         timestamp,
     };
-    const signature = cloudinary.utils.api_sign_request(signedParams, apiSecret);
+    const signature = cloudinary.utils.api_sign_request(signedParams, apiSecret!);
 
     return NextResponse.json({
-        uploadUrl: `https://api.cloudinary.com/v1_1/${cloudName}/auto/upload`,
+        uploadUrl,
         params: {
             api_key: apiKey,
             allowed_formats: CLOUDINARY_ALLOWED_FORMATS,

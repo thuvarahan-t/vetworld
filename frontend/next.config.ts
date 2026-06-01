@@ -17,6 +17,14 @@ const nextConfig: NextConfig = {
         destination: "/",
         permanent: true,
       },
+      {
+        // Legacy/plural category links (e.g. /categories/2) — the single
+        // category page lives at /category/[id]. Only matches when an id
+        // follows, so the /categories listing page keeps working.
+        source: "/categories/:id",
+        destination: "/category/:id",
+        permanent: true,
+      },
     ];
   },
   async rewrites() {

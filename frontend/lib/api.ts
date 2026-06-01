@@ -1,5 +1,3 @@
-import { addCsrfHeader } from "./csrf";
-
 const SERVER_API_BASE_URL =
     process.env.BACKEND_API_URL ||
     process.env.NEXT_PUBLIC_API_URL ||
@@ -43,19 +41,15 @@ export async function fetcher<T>(endpoint: string, options?: RequestInit): Promi
 
     const { signal: _ignoredSignal, ...requestOptions } = options || {};
 
-    // Prepare headers with CSRF token for state-changing requests
+    // CSRF protection relies on the SameSite=Strict auth cookie (vetworld_token):
+    // a cross-site forged request cannot carry it, so it lands unauthenticated and
+    // is rejected. No anti-CSRF header is needed for this stateless JWT-cookie setup.
     const headers: Record<string, string> = {
         "Content-Type": "application/json",
     };
     new Headers(requestOptions.headers).forEach((value, key) => {
         headers[key] = value;
     });
-
-    // Add CSRF token for POST, PUT, DELETE requests
-    const method = requestOptions.method?.toUpperCase();
-    if (method && ["POST", "PUT", "DELETE"].includes(method)) {
-        addCsrfHeader(headers);
-    }
 
     let res: Response;
 
@@ -181,6 +175,9 @@ export const userApi = {
             method: 'PUT',
             body: JSON.stringify({ bankDetails }),
         }),
+
+    getMe: () =>
+        authFetcher<{ name: string; email: string; role: string; phone?: string; address?: string }>("/auth/me"),
 
     updateProfile: (data: { name: string; phone: string; address: string }) =>
         authFetcher<any>("/auth/profile", { method: "PUT", body: JSON.stringify(data) }),

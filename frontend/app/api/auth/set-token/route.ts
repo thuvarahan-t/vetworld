@@ -19,7 +19,9 @@ export async function POST(request: NextRequest) {
 
         const cookieStore = await cookies();
 
-        // Set the JWT as an HttpOnly, Secure, SameSite=Strict cookie
+        // Set the JWT as an HttpOnly, Secure, SameSite=Strict cookie.
+        // SameSite=Strict is the CSRF defense: a cross-site forged request cannot
+        // carry this cookie, so it reaches the backend unauthenticated and is rejected.
         cookieStore.set("vetworld_token", token, {
             httpOnly: true,
             secure: process.env.NODE_ENV === "production",
@@ -28,21 +30,8 @@ export async function POST(request: NextRequest) {
             maxAge: 86400, // 24 hours
         });
 
-        // Also set a CSRF token (non-sensitive, sent in headers)
-        const csrfToken = generateCsrfToken();
-        cookieStore.set("vetworld_csrf", csrfToken, {
-            httpOnly: false, // Can be read by JS for inclusion in X-CSRF-Token header
-            secure: process.env.NODE_ENV === "production",
-            sameSite: "strict",
-            path: "/",
-            maxAge: 86400,
-        });
-
         return NextResponse.json(
-            {
-                success: true,
-                csrfToken, // Return CSRF token so frontend can use it
-            },
+            { success: true },
             { status: 200 }
         );
     } catch (error) {
@@ -61,16 +50,9 @@ export async function POST(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
     const cookieStore = await cookies();
     cookieStore.delete("vetworld_token");
-    cookieStore.delete("vetworld_csrf");
 
     return NextResponse.json(
         { success: true },
         { status: 200 }
     );
-}
-
-function generateCsrfToken(): string {
-    const array = new Uint8Array(32);
-    crypto.getRandomValues(array);
-    return Array.from(array, (byte) => byte.toString(16).padStart(2, "0")).join("");
 }
