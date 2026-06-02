@@ -1,5 +1,6 @@
 "use client";
 import { useCartStore } from "@/store/cartStore";
+import { formatMoney } from "@/lib/money";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -80,7 +81,7 @@ export default function CartPage() {
                                         </p>
                                     )}
                                     <p style={{ fontSize: "0.82rem", color: "var(--text-secondary)", marginBottom: "0.5rem" }}>Type: {item.typeName}</p>
-                                    <p style={{ fontWeight: 700, color: "var(--vet-blue)" }}>Rs. {item.unitPrice.toLocaleString()} each</p>
+                                    <p style={{ fontWeight: 700, color: "var(--vet-blue)" }}>Rs. {formatMoney(item.unitPrice)} each</p>
                                 </div>
 
                                 {/* Qty Controls */}
@@ -93,7 +94,7 @@ export default function CartPage() {
                                 {/* Line Total */}
                                 <div style={{ textAlign: "right", minWidth: 100 }}>
                                     <p style={{ fontWeight: 700, fontSize: "1.1rem", color: "var(--text-primary)" }}>
-                                        Rs. {(item.unitPrice * item.quantity).toLocaleString()}
+                                        Rs. {formatMoney(item.unitPrice * item.quantity)}
                                     </p>
                                 </div>
 
@@ -127,14 +128,14 @@ export default function CartPage() {
                     {items.map((item) => (
                         <div key={`${item.productId}-${item.typeId}`} style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.5rem", fontSize: "0.85rem" }}>
                             <span style={{ color: "var(--text-secondary)" }}>{item.productName} × {item.quantity}</span>
-                            <span style={{ fontWeight: 500 }}>Rs. {(item.unitPrice * item.quantity).toLocaleString()}</span>
+                            <span style={{ fontWeight: 500 }}>Rs. {formatMoney(item.unitPrice * item.quantity)}</span>
                         </div>
                     ))}
 
                     <div style={{ borderTop: "1px solid var(--border)", margin: "1rem 0", paddingTop: "1rem", display: "flex", justifyContent: "space-between" }}>
                         <span style={{ fontWeight: 700, fontSize: "1rem" }}>Total</span>
                         <span style={{ fontWeight: 800, fontSize: "1.15rem", color: "var(--vet-blue)" }}>
-                            Rs. {grandTotal.toLocaleString()}
+                            Rs. {formatMoney(grandTotal)}
                         </span>
                     </div>
 

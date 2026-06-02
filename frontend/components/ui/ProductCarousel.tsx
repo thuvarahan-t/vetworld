@@ -39,7 +39,7 @@ export default function ProductCarousel({ products }: Props) {
     };
 
     return (
-        <div style={{ position: "relative", margin: "0 -1rem -7rem", padding: "0 1rem" }}>
+        <div className="carousel-track-wrap">
             {/* Scroll Container */}
             <div
                 ref={scrollRef}
@@ -50,7 +50,17 @@ export default function ProductCarousel({ products }: Props) {
                     overflowX: "auto",
                     scrollSnapType: "x mandatory",
                     scrollBehavior: "smooth",
-                    padding: "0.5rem 0 8rem",
+                    // horizontal padding keeps the first/last cards' border + shadow inside
+                    // the scroll (overflow) box so they aren't sliced at the clip edge;
+                    // bottom padding leaves room for the hover lift + shadow. The wrapper's
+                    // negative margin pulls all of this back so it aligns with the panel.
+                    // (Mobile adds extra left padding for a start gap — see globals.css.)
+                    padding: "0.5rem 1rem 3.5rem",
+                    // Match scroll-padding to the left padding so the first card's snap
+                    // target is scrollLeft:0 (not ~paddingLeft). Without this, mandatory
+                    // snap rests the first card a few px in, so scrollLeft never returns
+                    // to 0 and the left arrow can't hide. (Mobile overrides in globals.css.)
+                    scrollPaddingLeft: "1rem",
                     scrollbarWidth: "none", // Hide scrollbar for Firefox
                     msOverflowStyle: "none", // Hide scrollbar for IE/Edge
                 }}
@@ -66,7 +76,9 @@ export default function ProductCarousel({ products }: Props) {
                         key={product.id}
                         style={{
                             flex: "0 0 auto",
-                            width: "min(280px, 75vw)",
+                            // ~2 cards visible on phones, up to 230px on desktop —
+                            // smaller, more professional than the old 280px.
+                            width: "clamp(150px, 45vw, 230px)",
                             scrollSnapAlign: "start",
                         }}
                     >
@@ -75,13 +87,20 @@ export default function ProductCarousel({ products }: Props) {
                 ))}
             </div>
 
+            {/* Edge fades — soft shade so cards appear to slide under the panel
+               edge. Only shown on the side that has more to scroll. */}
+            {canScrollLeft && <div className="carousel-fade carousel-fade-left" aria-hidden />}
+            {canScrollRight && <div className="carousel-fade carousel-fade-right" aria-hidden />}
+
             {/* Navigation Buttons */}
             {canScrollLeft && (
                 <button
                     onClick={() => scroll("left")}
+                    className="carousel-arrow carousel-arrow-left"
                     style={{
                         ...arrowStyle,
-                        left: "-0.5rem",
+                        // sits ~1rem inside the panel border (was -0.5rem = glued to it).
+                        left: "0.5rem",
                     }}
                     aria-label="Scroll left"
                 >
@@ -92,9 +111,10 @@ export default function ProductCarousel({ products }: Props) {
             {canScrollRight && (
                 <button
                     onClick={() => scroll("right")}
+                    className="carousel-arrow carousel-arrow-right"
                     style={{
                         ...arrowStyle,
-                        right: "-0.5rem",
+                        right: "0.5rem",
                     }}
                     aria-label="Scroll right"
                 >

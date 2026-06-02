@@ -2,6 +2,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { CartItem, ProductType } from "@/types";
+import { roundMoney } from "@/lib/money";
 
 interface CartStore {
     items: CartItem[];
@@ -62,7 +63,7 @@ export const useCartStore = create<CartStore>()(
 
             totalItems: () => get().items.reduce((sum, i) => sum + i.quantity, 0),
             totalPrice: () =>
-                get().items.reduce((sum, i) => sum + i.unitPrice * i.quantity, 0),
+                roundMoney(get().items.reduce((sum, i) => sum + roundMoney(i.unitPrice * i.quantity), 0)),
         }),
         { name: "vetworld-cart" }
     )

@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useCartStore } from "@/store/cartStore";
+import { formatMoney } from "@/lib/money";
 import { userApi } from "@/lib/api";
 import type { Order } from "@/types";
 import Link from "next/link";
@@ -490,7 +491,7 @@ export default function CheckoutPage() {
                                             <div style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>{item.typeName} × {item.quantity}</div>
                                         </div>
                                     </div>
-                                    <div style={{ fontWeight: 700 }}>Rs. {(item.unitPrice * item.quantity).toLocaleString()}</div>
+                                    <div style={{ fontWeight: 700 }}>Rs. {formatMoney(item.unitPrice * item.quantity)}</div>
                                 </div>
                             ))}
                         </div>
@@ -498,7 +499,7 @@ export default function CheckoutPage() {
                         {/* Total */}
                         <div style={{ borderTop: "2px solid var(--border)", margin: "1.5rem 0", paddingTop: "1.25rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                             <span style={{ fontWeight: 700, fontSize: "1rem" }}>Total Amount</span>
-                            <span style={{ fontWeight: 800, fontSize: "1.4rem", color: "var(--vet-blue)" }}>Rs. {grandTotal.toLocaleString()}</span>
+                            <span style={{ fontWeight: 800, fontSize: "1.4rem", color: "var(--vet-blue)" }}>Rs. {formatMoney(grandTotal)}</span>
                         </div>
 
                         {/* Slip uploader — only shown when SLIP method selected */}

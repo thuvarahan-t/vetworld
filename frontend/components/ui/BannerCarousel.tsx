@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import type { Banner } from "@/types";
@@ -47,6 +47,23 @@ export default function BannerCarousel({ banners }: Props) {
     const [current, setCurrent] = useState(0);
     const currentRedirectLink = resolveRedirectLink(banners[current]?.redirectLink);
 
+    const goNext = () => setCurrent((c) => (c + 1) % banners.length);
+    const goPrev = () => setCurrent((c) => (c - 1 + banners.length) % banners.length);
+
+    // Touch swipe (phones): a horizontal drag past the threshold flips slides.
+    const touchStartX = useRef<number | null>(null);
+    const handleTouchStart = (e: React.TouchEvent) => {
+        touchStartX.current = e.touches[0].clientX;
+    };
+    const handleTouchEnd = (e: React.TouchEvent) => {
+        if (touchStartX.current === null || banners.length <= 1) return;
+        const delta = e.changedTouches[0].clientX - touchStartX.current;
+        const SWIPE_THRESHOLD = 50; // px
+        if (delta <= -SWIPE_THRESHOLD) goNext();
+        else if (delta >= SWIPE_THRESHOLD) goPrev();
+        touchStartX.current = null;
+    };
+
     useEffect(() => {
         if (banners.length <= 1) return;
         const id = setInterval(() => {
@@ -89,12 +106,17 @@ export default function BannerCarousel({ banners }: Props) {
 
     return (
         <div
+            onTouchStart={handleTouchStart}
+            onTouchEnd={handleTouchEnd}
             style={{
                 position: "relative",
                 borderRadius: "var(--radius-lg)",
                 overflow: "hidden",
                 margin: "1.5rem 0",
-                height: "clamp(220px, 40vw, 440px)",
+                /* Keep the banner's native 1232×440 ratio on every screen so the
+                   image scales as a whole (no left/right crop on phones). */
+                width: "100%",
+                aspectRatio: "1232 / 440",
                 background: "rgba(255, 255, 255, 0.4)",
                 backdropFilter: "blur(12px)",
                 WebkitBackdropFilter: "blur(12px)",
@@ -166,15 +188,17 @@ export default function BannerCarousel({ banners }: Props) {
             {banners.length > 1 && (
                 <>
                     <button
-                        onClick={() => setCurrent((c) => (c - 1 + banners.length) % banners.length)}
+                        onClick={goPrev}
                         aria-label="Previous slide"
+                        className="banner-arrow"
                         style={arrowStyle("left")}
                     >
                         ‹
                     </button>
                     <button
-                        onClick={() => setCurrent((c) => (c + 1) % banners.length)}
+                        onClick={goNext}
                         aria-label="Next slide"
+                        className="banner-arrow"
                         style={arrowStyle("right")}
                     >
                         ›

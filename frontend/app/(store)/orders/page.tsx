@@ -42,10 +42,10 @@ function formatAddress(raw: string): string {
 // ─── Skeleton loader ───────────────────────────────────────────────────────
 function OrderSkeleton() {
     return (
-        <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+        <div className="orders-list" style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
             {[1, 2, 3].map((i) => (
-                <div key={i} className="card" style={{ padding: "1.5rem" }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "1.5rem" }}>
+                <div key={i} className="card order-card order-skeleton-card" style={{ padding: "1.5rem" }}>
+                    <div className="order-card-header" style={{ display: "flex", justifyContent: "space-between", marginBottom: "1.5rem" }}>
                         <div>
                             <div style={{ width: 160, height: 20, background: "var(--border)", borderRadius: 6, marginBottom: 8 }} />
                             <div style={{ width: 100, height: 14, background: "var(--border)", borderRadius: 6 }} />
@@ -116,13 +116,14 @@ function PaymentSlipUploader({ orderId, onSuccess }: { orderId: number; onSucces
     };
 
     return (
-        <div style={{ marginTop: "1.25rem", borderTop: "1px dashed var(--border)", paddingTop: "1.25rem" }}>
+        <div className="payment-slip-uploader" style={{ marginTop: "1.25rem", borderTop: "1px dashed var(--border)", paddingTop: "1.25rem" }}>
             <p style={{ fontWeight: 700, fontSize: "0.9rem", marginBottom: "0.75rem", color: "var(--text-primary)" }}>
                 📎 Paid via bank transfer? Upload your payment receipt:
             </p>
 
             {/* Drop zone */}
             <div
+                className="payment-slip-dropzone"
                 onDrop={(e) => { e.preventDefault(); setIsDragOver(false); const f = e.dataTransfer.files?.[0]; if (f) handleFile(f); }}
                 onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }}
                 onDragLeave={() => setIsDragOver(false)}
@@ -191,18 +192,18 @@ function OrderTracker({ status }: { status: string }) {
     const progressPct = steps.length > 1 ? (validIdx / (steps.length - 1)) * 100 : 0;
 
     return (
-        <div style={{ position: "relative", maxWidth: 480, margin: "0 auto" }}>
+        <div className="order-tracker" style={{ position: "relative", maxWidth: 480, margin: "0 auto" }}>
             {/* Track */}
             <div style={{ position: "absolute", top: 15, left: "8%", right: "8%", height: 3, background: "var(--border)", zIndex: 0 }} />
             <div style={{ position: "absolute", top: 15, left: "8%", height: 3, width: `${progressPct * 0.84}%`, background: "var(--vet-green)", zIndex: 1, transition: "width 0.6s ease" }} />
 
-            <div style={{ display: "flex", justifyContent: "space-between", position: "relative", zIndex: 2 }}>
+            <div className="order-tracker-steps" style={{ display: "flex", justifyContent: "space-between", position: "relative", zIndex: 2 }}>
                 {steps.map((step, idx) => {
                     const done = idx <= validIdx;
                     const active = idx === validIdx;
                     return (
-                        <div key={step.key} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.5rem" }}>
-                            <div style={{
+                        <div className="order-tracker-step" key={step.key} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.5rem" }}>
+                            <div className="order-tracker-dot" style={{
                                 width: 32, height: 32, borderRadius: "50%",
                                 background: done ? "var(--vet-green)" : "var(--surface)",
                                 border: done ? "2px solid var(--vet-green)" : "2px solid var(--border)",
@@ -213,7 +214,7 @@ function OrderTracker({ status }: { status: string }) {
                             }}>
                                 {done ? step.icon : ""}
                             </div>
-                            <span style={{ fontSize: "0.78rem", fontWeight: active ? 700 : 500, color: active ? "var(--text-primary)" : "var(--text-secondary)", whiteSpace: "nowrap" }}>
+                            <span className="order-tracker-label" style={{ fontSize: "0.78rem", fontWeight: active ? 700 : 500, color: active ? "var(--text-primary)" : "var(--text-secondary)", whiteSpace: "nowrap" }}>
                                 {step.label}
                             </span>
                         </div>
@@ -311,7 +312,7 @@ export default function MyOrdersPage() {
     };
 
     if (isLoading) return (
-        <main className="container-main section">
+        <main className="orders-page container-main section">
             <h1 className="section-title">My Orders</h1>
             <p className="section-subtitle" style={{ marginBottom: "2rem" }}>Track and manage your past purchases</p>
             <OrderSkeleton />
@@ -319,7 +320,7 @@ export default function MyOrdersPage() {
     );
 
     if (error) return (
-        <main className="container-main section" style={{ textAlign: "center", padding: "4rem 1rem" }}>
+        <main className="orders-page container-main section" style={{ textAlign: "center", padding: "4rem 1rem" }}>
             <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>⚠️</div>
             <h2 style={{ fontWeight: 700, marginBottom: "0.5rem" }}>Something went wrong</h2>
             <p style={{ color: "var(--text-secondary)", marginBottom: "2rem" }}>{error}</p>
@@ -328,7 +329,7 @@ export default function MyOrdersPage() {
     );
 
     if (orders.length === 0) return (
-        <main className="container-main section" style={{ textAlign: "center", padding: "5rem 1rem" }}>
+        <main className="orders-page orders-empty container-main section" style={{ textAlign: "center", padding: "5rem 1rem" }}>
             <div style={{ fontSize: "4rem", marginBottom: "1rem" }}>📦</div>
             <h2 style={{ fontSize: "1.5rem", fontWeight: 800, marginBottom: "0.75rem" }}>No Orders Yet</h2>
             <p style={{ color: "var(--text-secondary)", marginBottom: "2rem" }}>Browse our catalogue and place your first order.</p>
@@ -337,15 +338,15 @@ export default function MyOrdersPage() {
     );
 
     return (
-        <main className="container-main section">
-            <div style={{ marginBottom: "2rem" }}>
+        <main className="orders-page container-main section">
+            <div className="orders-page-header" style={{ marginBottom: "2rem" }}>
                 <h1 className="section-title">My Orders</h1>
                 <p className="section-subtitle" style={{ marginBottom: 0 }}>
                     {orders.length} order{orders.length !== 1 ? "s" : ""} · Track and manage your purchases
                 </p>
             </div>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+            <div className="orders-list" style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
                 {orders.map((order, idx) => {
                     const sc = statusColor(order.status);
                     const itemsOpen = expandedItems.has(order.id);
@@ -355,31 +356,31 @@ export default function MyOrdersPage() {
                             initial={{ opacity: 0, y: 12 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: idx * 0.07 }}
-                            className="card"
+                            className="card order-card"
                             style={{ padding: "1.5rem", overflow: "visible" }}
                         >
                             {/* ─── Header ─────────────────────────────────── */}
-                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "0.75rem", marginBottom: "1.25rem" }}>
-                                <div>
-                                    <div style={{ fontSize: "1.1rem", fontWeight: 800, color: "var(--vet-blue)", letterSpacing: "-0.3px" }}>
+                            <div className="order-card-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "0.75rem", marginBottom: "1.25rem" }}>
+                                <div className="order-id-block">
+                                    <div className="order-number" style={{ fontSize: "1.1rem", fontWeight: 800, color: "var(--vet-blue)", letterSpacing: "-0.3px" }}>
                                         {order.orderNumber}
                                     </div>
-                                    <div style={{ fontSize: "0.85rem", color: "var(--text-secondary)", marginTop: "0.2rem" }}>
+                                    <div className="order-date" style={{ fontSize: "0.85rem", color: "var(--text-secondary)", marginTop: "0.2rem" }}>
                                         {new Date(order.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
                                         {" · "}
                                         {new Date(order.createdAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}
                                     </div>
                                 </div>
-                                <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-                                    <span style={{
+                                <div className="order-summary-block" style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                                    <span className="order-status-pill" style={{
                                         padding: "0.3rem 0.75rem", borderRadius: 999, fontSize: "0.78rem", fontWeight: 700,
                                         background: sc.bg, color: sc.text
                                     }}>
                                         {statusLabel(order.status)}
                                     </span>
-                                    <div style={{ textAlign: "right" }}>
-                                        <div style={{ fontSize: "1.1rem", fontWeight: 800 }}>Rs. {order.totalAmount.toLocaleString()}</div>
-                                        <div style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>{order.items.length} item{order.items.length !== 1 ? "s" : ""}</div>
+                                    <div className="order-total-block" style={{ textAlign: "right" }}>
+                                        <div className="order-total" style={{ fontSize: "1.1rem", fontWeight: 800 }}>Rs. {order.totalAmount.toLocaleString()}</div>
+                                        <div className="order-item-count" style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>{order.items.length} item{order.items.length !== 1 ? "s" : ""}</div>
                                     </div>
                                 </div>
                             </div>

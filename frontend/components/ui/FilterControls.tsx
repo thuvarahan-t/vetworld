@@ -25,16 +25,25 @@ export default function FilterBar({ title, productsCount }: Props) {
     const [isSortOpen, setIsSortOpen] = useState(false);
     const [isSearchFocused, setIsSearchFocused] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
+    // Skip the mount run so simply landing on ?page=N doesn't strip the page
+    // param — only genuine filter/search/sort changes should reset to page 1.
+    const isFirstRender = useRef(true);
 
     const activeSortLabel = SORT_OPTIONS.find(opt => opt.value === sort)?.label || "Sort";
 
     // Auto-apply filters
     useEffect(() => {
+        if (isFirstRender.current) {
+            isFirstRender.current = false;
+            return;
+        }
         const params = new URLSearchParams(searchParams.toString());
         
         if (q) params.set("q", q); else params.delete("q");
         if (sort) params.set("sort", sort); else params.delete("sort");
         if (inStock) params.set("inStock", "true"); else params.delete("inStock");
+        // Any filter/search/sort change resets back to the first page.
+        params.delete("page");
 
         const newQuery = params.toString();
         if (newQuery !== searchParams.toString()) {
@@ -57,12 +66,13 @@ export default function FilterBar({ title, productsCount }: Props) {
     }, []);
 
     return (
-        <div 
-            style={{ 
-                display: "flex", 
-                alignItems: "center", 
+        <div
+            className="filter-bar"
+            style={{
+                display: "flex",
+                alignItems: "center",
                 justifyContent: "space-between",
-                gap: "2rem", 
+                gap: "2rem",
                 marginBottom: "1rem",
                 padding: "0.5rem 0",
                 borderBottom: "1px solid var(--border)",
@@ -82,10 +92,10 @@ export default function FilterBar({ title, productsCount }: Props) {
             </div>
 
             {/* Controls Group */}
-            <div style={{ display: "flex", alignItems: "center", gap: "2rem", flex: 1, justifyContent: "flex-end", flexWrap: "wrap" }}>
-                
+            <div className="filter-controls" style={{ display: "flex", alignItems: "center", gap: "2rem", flex: 1, justifyContent: "flex-end", flexWrap: "wrap" }}>
+
                 {/* Highly Modern Glassmorphic Search */}
-                <div style={{ position: "relative", flex: "0 1 280px", display: "flex", alignItems: "center" }}>
+                <div className="filter-search" style={{ position: "relative", flex: "0 1 280px", display: "flex", alignItems: "center" }}>
                     <motion.div
                         initial={false}
                         onFocus={() => setIsSearchFocused(true)}

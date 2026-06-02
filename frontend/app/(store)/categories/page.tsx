@@ -13,30 +13,25 @@ export default async function CategoriesPage() {
     }
 
     return (
-        <main className="container-main section">
-            <header style={{ marginBottom: "2.5rem" }}>
-                <h1 className="section-title">Browse by Category</h1>
-                <p className="section-subtitle">
+        <main className="categories-page container-main section">
+            <header className="categories-hero">
+                <div className="categories-hero-kicker">VetWorld catalog</div>
+                <h1 className="categories-hero-title">Browse by Category</h1>
+                <p className="categories-hero-copy">
                     Find the specialized veterinary and laboratory equipment you need.
                 </p>
             </header>
 
-            <div
-                style={{
-                    display: "grid",
-                    gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
-                    gap: "1.5rem",
-                }}
-            >
+            <div className="categories-list-grid">
                 {categories.map((cat) => (
                     <CategoryCard key={cat.id} category={cat} />
                 ))}
             </div>
 
             {categories.length === 0 && (
-                <div style={{ textAlign: "center", padding: "4rem" }}>
-                    <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>📁</div>
-                    <p style={{ color: "var(--text-secondary)" }}>No categories found.</p>
+                <div className="categories-empty-state">
+                    <div className="categories-empty-icon" aria-hidden="true" />
+                    <p>No categories found.</p>
                 </div>
             )}
         </main>
