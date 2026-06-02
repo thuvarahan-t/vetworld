@@ -25,7 +25,12 @@
       "PowerShell(curl.exe -s -o NUL -w \"status %{http_code}  total %{time_total}s\\\\n\" http://localhost:8080/api/products)",
       "PowerShell(\"--- /category/all \\(1st = compile\\) ---\")",
       "PowerShell(\"--- /category/all \\(2nd = warm\\) ---\")",
-      "PowerShell(\"--- direct backend /api/products ---\")"
+      "PowerShell(\"--- direct backend /api/products ---\")",
+      "PowerShell(Set-Location \"c:\\\\Users\\\\Acer\\\\Desktop\\\\work\\\\vetworldV2\\\\vetworld\\\\backend\\\\VetWorld\"; .\\\\mvnw.cmd -q test 2>&1 | Tee-Object -FilePath \"$env:TEMP\\\\vw_backend_test.log\")",
+      "Bash(sed -n '5,9p' com.vetworld.VetWorld.service.OrderServiceTest.txt)",
+      "Bash(sed -n '5,9p' com.vetworld.VetWorld.service.OtpServiceTest.txt)",
+      "Bash(awk '{print $6, $7}')",
+      "PowerShell(Set-Location \"c:\\\\Users\\\\Acer\\\\Desktop\\\\work\\\\vetworldV2\\\\vetworld\\\\backend\\\\VetWorld\"; .\\\\mvnw.cmd spring-boot:run 2>&1 | Tee-Object -FilePath \"$env:TEMP\\\\vw_backend_run.log\")"
     ]
   }
 }

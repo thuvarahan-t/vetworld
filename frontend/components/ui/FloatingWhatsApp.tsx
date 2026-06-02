@@ -31,6 +31,7 @@ export default function FloatingWhatsApp() {
             animate={controls}
             whileHover={{ scale: 1.15 }}
             whileTap={{ scale: 0.95 }}
+            className="floating-whatsapp"
             style={{
                 position: "fixed",
                 bottom: "2rem",

@@ -15,6 +15,7 @@ function ProductCard({ product }: Props) {
     const [added, setAdded] = useState(false);
     const [flyAnim, setFlyAnim] = useState<{ id: number; startX: number; startY: number; endX: number; endY: number } | null>(null);
     const [isQuickViewOpen, setIsQuickViewOpen] = useState(false);
+    const [isMobileQuickView, setIsMobileQuickView] = useState(false);
 
     // Manage selected type locally
     const [selectedType, setSelectedType] = useState<ProductType | undefined>(product.types?.[0]);
@@ -70,6 +71,16 @@ function ProductCard({ product }: Props) {
     const closeQuickView = () => {
         setIsQuickViewOpen(false);
     };
+
+    useEffect(() => {
+        const updateMobileQuickView = () => {
+            setIsMobileQuickView(window.matchMedia("(max-width: 768px)").matches);
+        };
+
+        updateMobileQuickView();
+        window.addEventListener("resize", updateMobileQuickView);
+        return () => window.removeEventListener("resize", updateMobileQuickView);
+    }, []);
 
     useEffect(() => {
         if (!isQuickViewOpen) return;
@@ -133,6 +144,7 @@ function ProductCard({ product }: Props) {
 
     return (
         <motion.div
+            className="product-card"
             whileHover={{ y: -6 }}
             transition={{ duration: 0.3, ease: [0.25, 0.1, 0.25, 1] }}
             style={{
@@ -178,8 +190,9 @@ function ProductCard({ product }: Props) {
             >
                 {/* Image Area - Square Frame */}
                 <div
+                    className="product-card-imgwrap"
                     style={{
-                        padding: "0.85rem",
+                        padding: "0.65rem",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
@@ -189,7 +202,9 @@ function ProductCard({ product }: Props) {
                 >
                     <div style={{
                         width: "100%",
-                        aspectRatio: "1 / 1",
+                        // 4:3 frame (was 1:1) — trims ~25% off the card's tallest block
+                        // while objectFit:contain keeps any product shape fully visible.
+                        aspectRatio: "4 / 3",
                         background: "white",
                         borderRadius: "var(--radius-md)",
                         overflow: "hidden",
@@ -212,7 +227,7 @@ function ProductCard({ product }: Props) {
                                     width: "100%",
                                     height: "100%",
                                     objectFit: "contain",
-                                    padding: "0.5rem",
+                                    padding: "0.4rem",
                                     transition: "transform 0.6s cubic-bezier(0.2, 0, 0.2, 1)"
                                 }}
                             />
@@ -266,32 +281,32 @@ function ProductCard({ product }: Props) {
                 </div>
 
                 {/* Content Area */}
-                <div style={{ padding: "1.25rem 1rem 0.5rem", flexGrow: 1, display: "flex", flexDirection: "column" }}>
-                    <h3 style={{
-                        fontWeight: 700, 
+                <div className="product-card-body" style={{ padding: "0.9rem 1rem 0.4rem", flexGrow: 1, display: "flex", flexDirection: "column" }}>
+                    <h3 className="product-card-title" style={{
+                        fontWeight: 700,
                         fontSize: "0.95rem",
-                        color: "var(--text-primary)", 
-                        marginBottom: "0.35rem",
-                        lineHeight: 1.4,
+                        color: "var(--text-primary)",
+                        marginBottom: "0.2rem",
+                        lineHeight: 1.35,
                         letterSpacing: "-0.01em",
-                        height: "calc(1.4em * 2)",
-                        overflow: "hidden", 
+                        height: "calc(1.35em * 2)",
+                        overflow: "hidden",
                         display: "-webkit-box",
-                        WebkitLineClamp: 2, 
+                        WebkitLineClamp: 2,
                         WebkitBoxOrient: "vertical",
                     }}>
                         {product.name}
                     </h3>
 
-                    <p style={{
-                        fontSize: "0.8rem", 
+                    <p className="product-card-desc" style={{
+                        fontSize: "0.8rem",
                         color: "var(--text-secondary)",
-                        marginBottom: "0.75rem", 
-                        lineHeight: 1.5,
-                        height: "1.5em",
-                        overflow: "hidden", 
+                        marginBottom: "0.5rem",
+                        lineHeight: 1.45,
+                        height: "1.45em",
+                        overflow: "hidden",
                         display: "-webkit-box",
-                        WebkitLineClamp: 1, 
+                        WebkitLineClamp: 1,
                         WebkitBoxOrient: "vertical",
                         opacity: 0.65
                     }}>
@@ -300,7 +315,7 @@ function ProductCard({ product }: Props) {
 
                     <div style={{ marginTop: "auto", display: "flex", alignItems: "baseline" }}>
                         {selectedType && (
-                            <span style={{ fontWeight: 800, color: "var(--vet-blue)", fontSize: "1.1rem", letterSpacing: "-0.02em" }}>
+                            <span className="product-card-price" style={{ fontWeight: 800, color: "var(--vet-blue)", fontSize: "1.1rem", letterSpacing: "-0.02em" }}>
                                 Rs. {Number(selectedType.price).toLocaleString("en-IN")}
                             </span>
                         )}
@@ -309,7 +324,7 @@ function ProductCard({ product }: Props) {
             </button>
 
             {/* Selection & CTA Area */}
-            <div style={{ padding: "0 1rem 1rem", marginTop: "auto", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+            <div className="product-card-cta" style={{ padding: "0 1rem 0.85rem", marginTop: "auto", display: "flex", flexDirection: "column", gap: "0.4rem" }}>
                 {product.types && product.types.length > 1 ? (
                     <div style={{ position: "relative" }}>
                         <button
@@ -500,43 +515,49 @@ function ProductCard({ product }: Props) {
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
                             transition={{ duration: 0.24 }}
+                            className="quickview-overlay"
                             style={{
                                 position: "fixed",
                                 inset: 0,
-                                background: "rgba(15, 23, 42, 0.4)",
-                                backdropFilter: "blur(12px)",
-                                WebkitBackdropFilter: "blur(12px)",
+                                background: isMobileQuickView ? "rgba(15, 23, 42, 0.62)" : "rgba(15, 23, 42, 0.4)",
+                                backdropFilter: isMobileQuickView ? "blur(18px) saturate(125%)" : "blur(12px)",
+                                WebkitBackdropFilter: isMobileQuickView ? "blur(18px) saturate(125%)" : "blur(12px)",
                                 display: "flex",
                                 alignItems: "center",
                                 justifyContent: "center",
-                                padding: "1.5rem",
+                                padding: isMobileQuickView ? "max(0.75rem, env(safe-area-inset-top, 0px)) 0.75rem max(0.75rem, env(safe-area-inset-bottom, 0px))" : "1.5rem",
                                 zIndex: 100000,
                             }}
                             onClick={closeQuickView}
                         >
                             <motion.div
-                                initial={{ opacity: 0, y: 30, scale: 0.95 }}
+                                initial={{ opacity: 0, y: isMobileQuickView ? 8 : 30, scale: isMobileQuickView ? 0.92 : 0.95 }}
                                 animate={{ opacity: 1, y: 0, scale: 1 }}
-                                exit={{ opacity: 0, y: 20, scale: 0.98 }}
+                                exit={{ opacity: 0, y: isMobileQuickView ? 8 : 20, scale: isMobileQuickView ? 0.94 : 0.98 }}
                                 transition={{ duration: 0.4, ease: [0.2, 0, 0, 1] }}
                                 onClick={(e) => e.stopPropagation()}
+                                className="quickview-modal"
                                 style={{
-                                    width: "min(1000px, 100%)",
-                                    maxHeight: "min(800px, 90vh)",
-                                    background: "var(--surface)",
-                                    borderRadius: "32px",
-                                    border: "1px solid rgba(255, 255, 255, 0.1)",
-                                    boxShadow: "0 40px 100px rgba(0, 0, 0, 0.25)",
+                                    width: isMobileQuickView ? "min(390px, calc(100vw - 1.5rem))" : "min(1000px, 100%)",
+                                    maxHeight: isMobileQuickView ? "calc(100dvh - 1.5rem - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))" : "min(800px, 90vh)",
+                                    background: isMobileQuickView ? "rgba(255, 255, 255, 0.97)" : "var(--surface)",
+                                    borderRadius: isMobileQuickView ? "24px" : "32px",
+                                    border: isMobileQuickView ? "1px solid rgba(255, 255, 255, 0.78)" : "1px solid rgba(255, 255, 255, 0.1)",
+                                    boxShadow: isMobileQuickView ? "0 26px 70px rgba(2, 8, 23, 0.42), inset 0 1px 0 rgba(255, 255, 255, 0.82)" : "0 40px 100px rgba(0, 0, 0, 0.25)",
                                     position: "relative",
                                     overflow: "hidden",
                                     display: "flex",
                                     flexDirection: "column",
                                 }}
                             >
+                                {/* Mobile drag handle (sheet affordance) */}
+                                <div className="quickview-handle" aria-hidden />
+
                                 {/* Close Button */}
                                 <button
                                     type="button"
                                     onClick={closeQuickView}
+                                    className="quickview-close"
                                     style={{
                                         position: "absolute",
                                         top: 24,
@@ -568,27 +589,38 @@ function ProductCard({ product }: Props) {
                                     ×
                                 </button>
 
-                                <div style={{ 
-                                    display: "grid", 
-                                    gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))",
-                                    height: "100%",
-                                    minHeight: 0
-                                }}>
+                                <div
+                                    className="quickview-grid"
+                                    style={{
+                                        display: isMobileQuickView ? "block" : "grid",
+                                        // min(360px, 100%) so the column never exceeds the modal
+                                        // width on narrow phones (a raw 360px min overflowed).
+                                        gridTemplateColumns: "repeat(auto-fit, minmax(min(360px, 100%), 1fr))",
+                                        height: isMobileQuickView ? "auto" : "100%",
+                                        maxHeight: isMobileQuickView ? "inherit" : undefined,
+                                        minHeight: 0,
+                                        overflowY: isMobileQuickView ? "auto" : undefined,
+                                        WebkitOverflowScrolling: isMobileQuickView ? "touch" : undefined,
+                                        overscrollBehavior: isMobileQuickView ? "contain" : undefined,
+                                    }}
+                                >
                                     {/* Modal - Left Column: Image Area */}
-                                    <div style={{ 
-                                        background: "linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)",
+                                    <div
+                                        className="quickview-media"
+                                        style={{
+                                        background: isMobileQuickView ? "linear-gradient(180deg, #f8fafc 0%, rgba(248, 250, 252, 0) 100%)" : "linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)",
                                         position: "relative",
                                         display: "flex",
                                         alignItems: "center",
                                         justifyContent: "center",
-                                        padding: "1.5rem",
+                                        padding: isMobileQuickView ? "1rem 1rem 0.65rem" : "1.5rem",
                                     }}>
                                         <div style={{
                                             width: "100%",
-                                            aspectRatio: "1/1",
-                                            borderRadius: "24px",
+                                            aspectRatio: isMobileQuickView ? "4 / 3" : "1/1",
+                                            borderRadius: isMobileQuickView ? "18px" : "24px",
                                             overflow: "hidden",
-                                            boxShadow: "0 20px 50px rgba(0, 0, 0, 0.1)",
+                                            boxShadow: isMobileQuickView ? "0 14px 34px rgba(15, 23, 42, 0.11)" : "0 20px 50px rgba(0, 0, 0, 0.1)",
                                             background: "white"
                                         }}>
                                             <AnimatePresence mode="wait">
@@ -653,12 +685,14 @@ function ProductCard({ product }: Props) {
                                     </div>
 
                                     {/* Modal - Right Column: Info Area */}
-                                    <div style={{ 
-                                        padding: "2rem 2rem 1.5rem",
+                                    <div
+                                        className="quickview-info"
+                                        style={{
+                                        padding: isMobileQuickView ? "0.95rem 1rem 1rem" : "2rem 2rem 1.5rem",
                                         display: "flex",
                                         flexDirection: "column",
-                                        overflowY: "auto",
-                                        background: "white"
+                                        overflowY: isMobileQuickView ? "visible" : "auto",
+                                        background: isMobileQuickView ? "transparent" : "white"
                                     }}>
                                         <div style={{ marginBottom: "1rem" }}>
                                             <div style={{ display: "flex", gap: "10px", marginBottom: "0.75rem", paddingRight: "50px" }}>
@@ -753,7 +787,7 @@ function ProductCard({ product }: Props) {
                                         )}
 
                                         {/* Bottom Pricing & Actions */}
-                                        <div style={{ 
+                                        <div className="quickview-actions" style={{
                                             marginTop: "auto",
                                             paddingTop: "1.5rem",
                                             borderTop: "1px solid var(--border)",
@@ -763,7 +797,7 @@ function ProductCard({ product }: Props) {
                                             gap: "1rem",
                                             flexWrap: "wrap"
                                         }}>
-                                            <div style={{ display: "flex", alignItems: "flex-end", gap: "1.5rem" }}>
+                                            <div style={{ display: "flex", alignItems: "flex-end", gap: "1.25rem", flexWrap: "wrap" }}>
                                                 <div>
                                                     <span style={{ fontSize: "0.8rem", fontWeight: 700, color: "var(--text-muted)" }}>Total Price</span>
                                                     <div style={{ display: "flex", alignItems: "baseline", gap: "8px" }}>
@@ -814,11 +848,12 @@ function ProductCard({ product }: Props) {
                                                 </div>
                                             </div>
 
-                                            <div style={{ display: "flex", gap: "0.8rem", flexWrap: "wrap", justifyContent: "flex-end" }}>
+                                            <div className="quickview-action-btns" style={{ display: "flex", gap: "0.8rem", flexWrap: "wrap", justifyContent: "flex-end" }}>
                                                 <button
                                                     type="button"
                                                     onClick={(e) => handleAddToCart(e, quantity)}
                                                     disabled={!selectedType || isSoldOut}
+                                                    className="quickview-cta"
                                                     style={{
                                                         border: "none",
                                                         background: isSoldOut ? "rgb(220, 38, 38)" : (added ? "#22c55e" : "var(--vet-blue)"),
@@ -848,16 +883,17 @@ function ProductCard({ product }: Props) {
                                                 >
                                                     {isSoldOut ? "Sold Out" : (added ? "Added ✓" : "Add to Cart")}
                                                 </button>
-                                                <Link 
-                                                    href="/cart" 
-                                                    className="btn-secondary" 
+                                                <Link
+                                                    href="/cart"
+                                                    className="btn-secondary quickview-viewcart"
                                                     onClick={closeQuickView}
-                                                    style={{ 
-                                                        borderRadius: "16px", 
+                                                    style={{
+                                                        borderRadius: "16px",
                                                         padding: "0.875rem 1.25rem",
                                                         borderWidth: "2px",
                                                         display: "flex",
                                                         alignItems: "center",
+                                                        justifyContent: "center",
                                                         gap: "8px",
                                                         textDecoration: "none"
                                                     }}

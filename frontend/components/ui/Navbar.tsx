@@ -5,10 +5,12 @@ import { useCartStore } from "@/store/cartStore";
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import AuthModal, { User } from "./AuthModal";
 import ProfileModal from "./ProfileModal";
+import SearchSuggestions from "./SearchSuggestions";
 import { userApi } from "@/lib/api";
+import { useProductSearch } from "@/lib/useProductSearch";
 
 export default function Navbar() {
     const router = useRouter();
@@ -24,7 +26,32 @@ export default function Navbar() {
     const [isSearchFocused, setIsSearchFocused] = useState(false);
     const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
     const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+    const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
     const profileDropdownRef = useRef<HTMLDivElement>(null);
+    const mobileSearchRef = useRef<HTMLDivElement>(null);
+    const mobileSearchBtnRef = useRef<HTMLButtonElement>(null);
+
+    // Live type-ahead matches for the search boxes (shared cache; see hook).
+    const searchResults = useProductSearch(searchQuery);
+    // Called when a suggestion is chosen — collapse both search surfaces.
+    const onSuggestionSelect = () => {
+        setIsMobileSearchOpen(false);
+        setIsSearchFocused(false);
+    };
+
+    // Mobile: collapse the search drop-down when tapping anywhere outside it
+    // (but not on the toggle button, which manages its own open/close).
+    useEffect(() => {
+        if (!isMobileSearchOpen) return;
+        const handleOutside = (e: PointerEvent) => {
+            const t = e.target as Node;
+            if (mobileSearchRef.current?.contains(t)) return;
+            if (mobileSearchBtnRef.current?.contains(t)) return;
+            setIsMobileSearchOpen(false);
+        };
+        document.addEventListener("pointerdown", handleOutside);
+        return () => document.removeEventListener("pointerdown", handleOutside);
+    }, [isMobileSearchOpen]);
 
     // Close dropdown when clicking outside
     useEffect(() => {
@@ -119,6 +146,8 @@ export default function Navbar() {
                 <div style={{ position: "relative" }} ref={profileDropdownRef}>
                     <button
                         onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
+                        className="nav-action"
+                        aria-label="Profile"
                         style={{
                             display: "flex",
                             alignItems: "center",
@@ -126,8 +155,8 @@ export default function Navbar() {
                             width: "40px",
                             height: "40px",
                             borderRadius: "50%",
-                            background: "var(--vet-blue-light)",
-                            color: "var(--vet-blue)",
+                            background: "var(--bg)",
+                            color: "var(--text-primary)",
                             border: "1.5px solid var(--border)",
                             cursor: "pointer",
                             transition: "all var(--transition)",
@@ -136,9 +165,13 @@ export default function Navbar() {
                         }}
                         onMouseEnter={(e) => {
                             e.currentTarget.style.borderColor = "var(--vet-blue)";
+                            e.currentTarget.style.color = "var(--vet-blue)";
                         }}
                         onMouseLeave={(e) => {
-                            if (!isProfileDropdownOpen) e.currentTarget.style.borderColor = "var(--border)";
+                            if (!isProfileDropdownOpen) {
+                                e.currentTarget.style.borderColor = "var(--border)";
+                                e.currentTarget.style.color = "var(--text-primary)";
+                            }
                         }}
                     >
                         <UserIcon size={22} />
@@ -249,11 +282,13 @@ export default function Navbar() {
         return (
             <button
                 onClick={() => setIsAuthModalOpen(true)}
+                className="nav-action"
+                aria-label="Login"
                 style={{
                     display: "flex",
                     alignItems: "center",
                     gap: "0.4rem",
-                    background: "transparent",
+                    background: "var(--bg)",
                     color: "var(--text-primary)",
                     fontWeight: 600,
                     fontSize: "0.9rem",
@@ -273,7 +308,7 @@ export default function Navbar() {
                 }}
             >
                 <UserIcon />
-                <span>Login</span>
+                <span className="nav-action-label">Login</span>
             </button>
         );
     };
@@ -293,22 +328,18 @@ export default function Navbar() {
                 transition: "all var(--transition)",
             }}
         >
-            <div className="container-main" style={{ display: "flex", alignItems: "center", height: 64, gap: "1.5rem" }}>
+            <div className="container-main nav-top-row" style={{ display: "flex", alignItems: "center", height: 64, gap: "1.5rem" }}>
                 {/* Logo */}
-                <Link href="/" style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontWeight: 800, fontSize: "1.25rem", color: "var(--vet-blue)" }}>
+                <Link href="/" style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontWeight: 800, fontSize: "1.25rem", color: "var(--vet-blue)", flexShrink: 0 }}>
                     <Image src="/logo.png" alt="VetWorld logo" width={34} height={34} priority />
-                    <span>VetWorld</span>
+                    <span className="nav-logo-text">VetWorld</span>
                 </Link>
 
-                {/* Nav Links */}
-                <nav style={{ display: "flex", alignItems: "center", gap: "1.5rem", marginLeft: "1rem" }}>
-                    <NavLink href="/">Home</NavLink>
-                    <NavLink href="/category/all">Products</NavLink>
-                    <NavLink href="/categories">Categories</NavLink>
-                </nav>
+                {/* Nav Links (desktop only — mobile uses the floating bottom bar) */}
+                <NavLinks />
 
                 {/* Search Bar - Center/Right Expansion */}
-                <div style={{ flex: 1, display: "flex", justifyContent: "center", maxWidth: "600px" }}>
+                <div className="nav-search" style={{ flex: 1, position: "relative", display: "flex", justifyContent: "center", maxWidth: "600px", minWidth: 0 }}>
                     <form
                         onSubmit={handleSearch}
                         style={{
@@ -352,14 +383,38 @@ export default function Navbar() {
                             }}
                         />
                     </form>
+
+                    {/* Desktop type-ahead suggestions. onMouseDown preventDefault keeps the
+                        input focused so clicking a result fires before the blur closes it. */}
+                    {isSearchFocused && searchQuery.trim().length > 0 && (
+                        <div
+                            onMouseDown={(e) => e.preventDefault()}
+                            style={{ position: "absolute", top: "calc(100% + 0.5rem)", left: 0, right: 0, zIndex: 110 }}
+                        >
+                            <SearchSuggestions results={searchResults} query={searchQuery} onSelect={onSuggestionSelect} />
+                        </div>
+                    )}
                 </div>
 
                 {/* Actions: Cart + Auth */}
-                <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+                <div className="nav-actions" style={{ display: "flex", alignItems: "center", gap: "1rem", flexShrink: 0 }}>
+                    {/* Search (mobile only — desktop uses the inline search bar) */}
+                    <button
+                        ref={mobileSearchBtnRef}
+                        type="button"
+                        className="nav-action nav-mobile-only"
+                        aria-label="Search"
+                        onClick={() => setIsMobileSearchOpen((v) => !v)}
+                    >
+                        <SearchIcon />
+                    </button>
+
                     {/* My Orders (Visible when logged in) */}
                     {isMounted && user && (
                         <Link
                             href="/orders"
+                            className="nav-action"
+                            aria-label="My Orders"
                             style={{
                                 display: "flex",
                                 alignItems: "center",
@@ -382,8 +437,8 @@ export default function Navbar() {
                                 e.currentTarget.style.color = "var(--text-primary)";
                             }}
                         >
-                            <span>📦</span>
-                            <span>My Orders</span>
+                            <OrdersIcon />
+                            <span className="nav-action-label">My Orders</span>
                         </Link>
                     )}
 
@@ -391,22 +446,33 @@ export default function Navbar() {
                     <Link
                         href="/cart"
                         id="nav-cart-icon"
+                        className="nav-action"
+                        aria-label="Cart"
                         style={{
                             position: "relative",
                             display: "flex",
                             alignItems: "center",
                             gap: "0.4rem",
-                            background: "var(--vet-blue-light)",
-                            color: "var(--vet-blue)",
+                            background: "var(--bg)",
+                            color: "var(--text-primary)",
                             fontWeight: 600,
                             fontSize: "0.9rem",
                             padding: "0.5rem 1rem",
                             borderRadius: "var(--radius-sm)",
-                            transition: "background var(--transition)",
+                            border: "1.5px solid var(--border)",
+                            transition: "all var(--transition)",
+                        }}
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.borderColor = "var(--vet-blue)";
+                            e.currentTarget.style.color = "var(--vet-blue)";
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.borderColor = "var(--border)";
+                            e.currentTarget.style.color = "var(--text-primary)";
                         }}
                     >
                         <CartIcon />
-                        <span>Cart</span>
+                        <span className="nav-action-label">Cart</span>
                         {isMounted && totalItems > 0 && (
                             <motion.span
                                 initial={{ scale: 0 }}
@@ -423,6 +489,65 @@ export default function Navbar() {
                 </div>
             </div>
 
+            {/* Mobile search drop-down — overlays (absolute) so it never shifts the bar */}
+            <AnimatePresence>
+                {isMobileSearchOpen && (
+                    <motion.div
+                        ref={mobileSearchRef}
+                        className="nav-mobile-search"
+                        initial={{ opacity: 0, y: -8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -8 }}
+                        transition={{ duration: 0.2 }}
+                        style={{
+                            position: "absolute",
+                            top: "100%",
+                            left: 0,
+                            right: 0,
+                            padding: "0.75rem 0.85rem",
+                            background: "rgba(255,255,255,0.85)",
+                            backdropFilter: "blur(12px)",
+                            WebkitBackdropFilter: "blur(12px)",
+                            borderBottom: "1px solid rgba(255,255,255,0.4)",
+                            boxShadow: "0 8px 24px rgba(0,0,0,0.07)",
+                        }}
+                    >
+                        <form
+                            onSubmit={(e) => { handleSearch(e); setIsMobileSearchOpen(false); }}
+                            style={{ position: "relative", display: "flex", alignItems: "center" }}
+                        >
+                            <div style={{ position: "absolute", left: "12px", opacity: 0.5, display: "flex", pointerEvents: "none" }}>
+                                <SearchIcon />
+                            </div>
+                            <input
+                                type="text"
+                                autoFocus
+                                placeholder="Search products, brands or equipment..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                style={{
+                                    width: "100%",
+                                    padding: "0.7rem 1rem 0.7rem 2.75rem",
+                                    borderRadius: "var(--radius-lg)",
+                                    border: "1px solid rgba(26,115,232,0.4)",
+                                    background: "rgba(255,255,255,0.9)",
+                                    color: "var(--text-primary)",
+                                    outline: "none",
+                                    fontSize: "0.95rem",
+                                }}
+                            />
+                        </form>
+
+                        {/* Live suggestions under the mobile search input */}
+                        {searchQuery.trim().length > 0 && (
+                            <div style={{ marginTop: "0.6rem" }}>
+                                <SearchSuggestions results={searchResults} query={searchQuery} onSelect={onSuggestionSelect} />
+                            </div>
+                        )}
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
             <AuthModal
                 isOpen={isAuthModalOpen}
                 onClose={() => setIsAuthModalOpen(false)}
@@ -437,6 +562,12 @@ export default function Navbar() {
             />
 
         </header>
+
+            {/* ── Floating Bottom Nav (mobile only) ── */}
+            <MobileBottomNav
+                isLoggedIn={isMounted && !!user}
+                onRequireAuth={() => setIsAuthModalOpen(true)}
+            />
 
             {/* ── Logout Confirmation Dialog (Portal) ── */}
             {isMounted && createPortal(
@@ -512,21 +643,194 @@ export default function Navbar() {
     );
 }
 
-function NavLink({ href, children }: { href: string; children: React.ReactNode }) {
+// `match` lists the route prefix(es) that mark a tab active — separate from
+// `href` (where the tab links to). "Products" links to /category/all but stays
+// active across every /category/* and /product/* page.
+const NAV_ITEMS = [
+    { href: "/", label: "Home", icon: HomeIcon, match: ["/"] },
+    { href: "/category/all", label: "Products", icon: ProductsIcon, match: ["/category", "/product"] },
+    { href: "/categories", label: "Categories", icon: CategoriesIcon, match: ["/categories"] },
+];
+
+// The mobile bottom bar adds Orders as a fourth tab (desktop keeps it as a
+// separate top-right action that only appears when signed in).
+const MOBILE_NAV_ITEMS = [
+    ...NAV_ITEMS,
+    { href: "/orders", label: "Orders", icon: OrdersIcon, match: ["/orders"] },
+];
+
+// True when `pathname` is, or sits under, `prefix` (segment-aware so
+// "/categories" never matches the "/category" prefix). "/" matches only "/".
+function matchesPrefix(pathname: string, prefix: string): boolean {
+    if (prefix === "/") return pathname === "/";
+    return pathname === prefix || pathname.startsWith(prefix + "/");
+}
+
+// Determine which nav item matches the current route. Longest matched prefix
+// wins so "/category" beats "/" on product pages, and "/" only matches exactly.
+function getActiveHref(pathname: string, items = NAV_ITEMS): string | null {
+    let activeHref: string | null = null;
+    let bestLen = -1;
+    for (const item of items) {
+        for (const prefix of item.match) {
+            if (matchesPrefix(pathname, prefix) && prefix.length > bestLen) {
+                activeHref = item.href;
+                bestLen = prefix.length;
+            }
+        }
+    }
+    return activeHref;
+}
+
+function NavLinks() {
+    const pathname = usePathname();
+    const [hovered, setHovered] = useState<string | null>(null);
+
+    const activeHref = getActiveHref(pathname);
+
+    // The pill follows the hovered item, falling back to the active route.
+    const highlighted = hovered ?? activeHref;
+
     return (
-        <Link
-            href={href}
-            style={{
-                color: "var(--text-secondary)",
-                fontWeight: 500,
-                fontSize: "0.9rem",
-                transition: "color var(--transition)",
-            }}
-            onMouseEnter={(e) => (e.currentTarget.style.color = "var(--vet-blue)")}
-            onMouseLeave={(e) => (e.currentTarget.style.color = "var(--text-secondary)")}
+        <nav
+            className="nav-desktop-only"
+            onMouseLeave={() => setHovered(null)}
+            style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginLeft: "1rem" }}
         >
-            {children}
-        </Link>
+            {NAV_ITEMS.map((item) => {
+                const isActive = item.href === activeHref;
+                const isHighlighted = item.href === highlighted;
+                return (
+                    <Link
+                        key={item.href}
+                        href={item.href}
+                        onMouseEnter={() => setHovered(item.href)}
+                        style={{
+                            position: "relative",
+                            display: "flex",
+                            alignItems: "center",
+                            padding: "0.5rem 1rem",
+                            borderRadius: "999px",
+                            fontWeight: isActive ? 700 : 500,
+                            fontSize: "0.9rem",
+                            color: isHighlighted ? "var(--vet-blue)" : "var(--text-secondary)",
+                            transition: "color 0.25s ease",
+                            WebkitTapHighlightColor: "transparent",
+                        }}
+                    >
+                        {/* Travelling liquid-glass pill */}
+                        {isHighlighted && (
+                            <motion.span
+                                layoutId="nav-glass-pill"
+                                transition={{ type: "spring", stiffness: 380, damping: 32 }}
+                                style={{
+                                    position: "absolute",
+                                    inset: 0,
+                                    borderRadius: "999px",
+                                    background: "linear-gradient(135deg, rgba(26,115,232,0.16), rgba(255,255,255,0.35))",
+                                    backdropFilter: "blur(8px)",
+                                    WebkitBackdropFilter: "blur(8px)",
+                                    border: "1px solid rgba(26,115,232,0.25)",
+                                    boxShadow: "0 4px 18px rgba(26,115,232,0.18), inset 0 1px 1px rgba(255,255,255,0.6)",
+                                    zIndex: 0,
+                                }}
+                            />
+                        )}
+                        <span style={{ position: "relative", zIndex: 1 }}>{item.label}</span>
+                    </Link>
+                );
+            })}
+        </nav>
+    );
+}
+
+/* ── Floating glass bottom nav (mobile). A compact, content-width pill
+   centred via left:50% + x:-50%; springs up on mount, and the travelling
+   pill marks the active page. ── */
+function MobileBottomNav({ isLoggedIn, onRequireAuth }: { isLoggedIn: boolean; onRequireAuth: () => void }) {
+    const pathname = usePathname();
+    const activeHref = getActiveHref(pathname, MOBILE_NAV_ITEMS);
+
+    return (
+        <>
+        <div className="mobile-bottom-nav-shade" aria-hidden="true" />
+        <motion.nav
+            className="mobile-bottom-nav"
+            aria-label="Primary"
+            initial={{ opacity: 0, y: 28, x: "-50%" }}
+            animate={{ opacity: 1, y: 0, x: "-50%" }}
+            transition={{ type: "spring", stiffness: 260, damping: 24, delay: 0.05 }}
+            style={{
+                position: "fixed",
+                left: "50%",
+                bottom: "calc(env(safe-area-inset-bottom, 0px) + 0.85rem)",
+                width: "min(440px, calc(100% - 1.5rem))",
+                zIndex: 200,
+                display: "none", // switched to flex on mobile via CSS
+                alignItems: "stretch",
+                gap: "0.2rem",
+                padding: "0.4rem",
+                borderRadius: "999px",
+                background: "rgba(255, 255, 255, 0.84)",
+                backdropFilter: "blur(18px) saturate(180%)",
+                WebkitBackdropFilter: "blur(18px) saturate(180%)",
+                border: "1px solid rgba(255, 255, 255, 0.78)",
+                boxShadow: "0 8px 32px rgba(31, 38, 135, 0.18), inset 0 1px 1px rgba(255, 255, 255, 0.82)",
+            }}
+        >
+            {MOBILE_NAV_ITEMS.map((item) => {
+                const isActive = item.href === activeHref;
+                const Icon = item.icon;
+                // Orders needs a session — prompt login instead of bouncing to home.
+                const requiresAuth = item.href === "/orders" && !isLoggedIn;
+                return (
+                    <motion.div key={item.href} whileTap={{ scale: 0.92 }} style={{ flex: 1 }}>
+                    <Link
+                        href={item.href}
+                        aria-current={isActive ? "page" : undefined}
+                        onClick={requiresAuth ? (e) => { e.preventDefault(); onRequireAuth(); } : undefined}
+                        style={{
+                            position: "relative",
+                            display: "flex",
+                            flexDirection: "column",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            gap: "0.15rem",
+                            padding: "0.5rem 0",
+                            borderRadius: "999px",
+                            color: isActive ? "var(--vet-blue)" : "var(--text-secondary)",
+                            fontWeight: isActive ? 700 : 500,
+                            fontSize: "0.68rem",
+                            transition: "color 0.25s ease",
+                            WebkitTapHighlightColor: "transparent",
+                        }}
+                    >
+                        {/* Travelling liquid-glass pill */}
+                        {isActive && (
+                            <motion.span
+                                layoutId="mobile-nav-pill"
+                                transition={{ type: "spring", stiffness: 380, damping: 32 }}
+                                style={{
+                                    position: "absolute",
+                                    inset: 0,
+                                    borderRadius: "999px",
+                                    background: "linear-gradient(135deg, rgba(26,115,232,0.18), rgba(255,255,255,0.4))",
+                                    border: "1px solid rgba(26,115,232,0.3)",
+                                    boxShadow: "0 4px 16px rgba(26,115,232,0.22), inset 0 1px 1px rgba(255,255,255,0.7)",
+                                    zIndex: 0,
+                                }}
+                            />
+                        )}
+                        <span style={{ position: "relative", zIndex: 1, display: "flex" }}>
+                            <Icon />
+                        </span>
+                        <span style={{ position: "relative", zIndex: 1 }}>{item.label}</span>
+                    </Link>
+                    </motion.div>
+                );
+            })}
+        </motion.nav>
+        </>
     );
 }
 
@@ -567,6 +871,48 @@ function CartIcon() {
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="9" cy="21" r="1" /><circle cx="20" cy="21" r="1" />
             <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
+        </svg>
+    );
+}
+
+function HomeIcon({ size = 20 }: { size?: number }) {
+    return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M3 9.5 12 3l9 6.5"></path>
+            <path d="M5 9v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9"></path>
+            <path d="M9 21v-6h6v6"></path>
+        </svg>
+    );
+}
+
+function ProductsIcon({ size = 20 }: { size?: number }) {
+    return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+            <path d="m3.3 7 8.7 5 8.7-5"></path>
+            <path d="M12 22V12"></path>
+        </svg>
+    );
+}
+
+function CategoriesIcon({ size = 20 }: { size?: number }) {
+    return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="3" width="7" height="7" rx="1.5"></rect>
+            <rect x="14" y="3" width="7" height="7" rx="1.5"></rect>
+            <rect x="3" y="14" width="7" height="7" rx="1.5"></rect>
+            <rect x="14" y="14" width="7" height="7" rx="1.5"></rect>
+        </svg>
+    );
+}
+
+function OrdersIcon({ size = 18 }: { size?: number }) {
+    return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M16.5 9.4 7.5 4.21"></path>
+            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+            <path d="m3.3 7 8.7 5 8.7-5"></path>
+            <path d="M12 22V12"></path>
         </svg>
     );
 }

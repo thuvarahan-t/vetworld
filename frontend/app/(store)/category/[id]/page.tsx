@@ -1,18 +1,23 @@
 import { api } from "@/lib/api";
 import ProductCard from "@/components/ui/ProductCard";
 import FilterBar from "@/components/ui/FilterControls";
+import Pagination from "@/components/ui/Pagination";
 import Link from "next/link";
 import type { Product, Category } from "@/types";
 
+// Products shown per page in the listing grid.
+const PAGE_SIZE = 12;
+
 interface Params {
     params: Promise<{ id: string }>;
-    searchParams: Promise<{ 
-        q?: string; 
-        filter?: string; 
-        sort?: string; 
-        min?: string; 
-        max?: string; 
-        inStock?: string 
+    searchParams: Promise<{
+        q?: string;
+        filter?: string;
+        sort?: string;
+        min?: string;
+        max?: string;
+        inStock?: string;
+        page?: string;
     }>;
 }
 
@@ -43,7 +48,7 @@ async function getData(categoryId: string) {
 
 export default async function CategoryPage({ params, searchParams }: Params) {
     const { id } = await params;
-    const { q, filter, sort, min, max, inStock } = await searchParams;
+    const { q, filter, sort, min, max, inStock, page } = await searchParams;
     const { products, categories, categoryName } = await getData(id);
 
     let filtered = products as Product[];
@@ -93,12 +98,18 @@ export default async function CategoryPage({ params, searchParams }: Params) {
         });
     }
 
+    // 5. Pagination — slice the filtered list to the current page.
+    const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+    const currentPage = Math.min(Math.max(1, Number(page) || 1), totalPages);
+    const pageStart = (currentPage - 1) * PAGE_SIZE;
+    const pageItems = filtered.slice(pageStart, pageStart + PAGE_SIZE);
+
     return (
         <main>
             {/* ── Category Nav ───────────────── */}
             <div style={{ borderBottom: "1px solid var(--border)", background: "rgba(255,255,255,0.4)", backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)" }}>
                 <div
-                    className="container-main"
+                    className="container-main category-chips"
                     style={{ display: "flex", gap: "0.75rem", padding: "1rem 1.5rem", overflowX: "auto" }}
                 >
                     <Link
@@ -128,11 +139,19 @@ export default async function CategoryPage({ params, searchParams }: Params) {
                     <div>
                         {/* ── Product Grid ────────────────── */}
                         {filtered.length > 0 ? (
-                            <div className="product-results-grid">
-                                {filtered.map((p) => (
-                                    <ProductCard key={p.id} product={p} />
-                                ))}
-                            </div>
+                            <>
+                                <div className="product-results-grid">
+                                    {pageItems.map((p) => (
+                                        <ProductCard key={p.id} product={p} />
+                                    ))}
+                                </div>
+                                <Pagination
+                                    basePath={`/category/${id}`}
+                                    query={{ q, filter, sort, min, max, inStock }}
+                                    currentPage={currentPage}
+                                    totalPages={totalPages}
+                                />
+                            </>
                         ) : (
                             <div style={{ textAlign: "center", padding: "4rem 2rem", background: "rgba(255,255,255,0.3)", borderRadius: "var(--radius-lg)", border: "1px dashed var(--border)" }}>
                                 <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>🔍</div>

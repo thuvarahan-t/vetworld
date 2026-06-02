@@ -89,19 +89,24 @@ img {
   padding: 0 1.5rem;
 }
 
+/* Only sets top/bottom — using the `padding` shorthand here would wipe the
+   left/right padding `.container-main` adds when both classes share an element
+   (e.g. `section container-main`), pushing panels flush to the screen edge. */
 .section {
-  padding: 3rem 0;
+  padding-block: 2rem;
 }
 
 .section-title {
   font-size: 1.6rem;
   font-weight: 700;
+  line-height: 1.2;
   color: var(--text-primary);
   margin-bottom: 0.4rem;
 }
 
 .section-subtitle {
   font-size: 0.95rem;
+  line-height: 1.45;
   color: var(--text-secondary);
   margin-bottom: 2rem;
 }
@@ -193,6 +198,216 @@ img {
   border-radius: var(--radius-lg);
 }
 
+/* Padded panel (e.g. the Categories block) — roomy on desktop, tight on phones. */
+.section-panel { padding: 3rem 2rem; }
+
+/* Glass panel that wraps the home-page carousels. Roomy on desktop; trimmed on
+   phones (see mobile block) so cards can use more of the narrow viewport. */
+.carousel-panel { padding: 1.5rem; }
+
+/* Wrapper around the scrolling track. The negative side margins bleed the
+   scroll box out to the panel's edges so card shadows aren't clipped; the
+   bottom one pulls back the track's extra bottom padding (hover-lift room).
+   The bleed must match the panel's side padding — on phones that padding is
+   only 0.6rem, so a -1rem bleed would push cards past the panel's right edge. */
+.carousel-track-wrap { position: relative; margin: 0 -1rem -2.5rem; }
+
+/* Soft shade at the carousel edges so cards look like they slide in/out from
+   under the panel rather than being hard-cut. `bottom` matches the track's
+   3.5rem bottom padding so the fade covers only the card row, not empty space. */
+.carousel-fade {
+  position: absolute;
+  top: 0;
+  bottom: 3.5rem;
+  width: 2.5rem;
+  pointer-events: none;
+  z-index: 5;
+}
+.carousel-fade-left {
+  left: 0;
+  background: linear-gradient(to right, rgba(255, 255, 255, 0.85), rgba(255, 255, 255, 0));
+}
+.carousel-fade-right {
+  right: 0;
+  background: linear-gradient(to left, rgba(255, 255, 255, 0.85), rgba(255, 255, 255, 0));
+}
+
+@media (max-width: 640px) {
+  /* Smaller, subtler shade on phones. */
+  .carousel-fade { width: 1.75rem; }
+}
+
+/* Section heading row (title + subtitle + "View all"). */
+.section-header { margin-bottom: 1.5rem; }
+
+/* Storefront category tiles: shared by the category listing and home block. */
+.category-grid,
+.categories-list-grid {
+  display: grid;
+}
+
+.category-card-motion {
+  height: 100%;
+  min-width: 0;
+}
+
+.category-card {
+  position: relative;
+  display: flex;
+  height: 100%;
+  min-width: 0;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.85rem;
+  padding: 1.15rem 0.95rem;
+  text-align: center;
+  border: 1px solid rgba(255, 255, 255, 0.62);
+  border-radius: var(--radius-md);
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.82), rgba(255, 255, 255, 0.46)),
+    radial-gradient(circle at 50% 0%, rgba(26, 115, 232, 0.12), transparent 58%);
+  box-shadow: 0 10px 26px rgba(15, 23, 42, 0.07);
+  overflow: hidden;
+  cursor: pointer;
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  transition: border-color var(--transition), box-shadow var(--transition), background var(--transition);
+}
+
+.category-card:hover {
+  border-color: rgba(26, 115, 232, 0.24);
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.62)),
+    radial-gradient(circle at 50% 0%, rgba(13, 158, 110, 0.13), transparent 60%);
+  box-shadow: 0 16px 38px rgba(15, 23, 42, 0.11);
+}
+
+.category-card-media {
+  width: clamp(58px, 36%, 78px);
+  aspect-ratio: 1;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: 12px;
+  background:
+    linear-gradient(135deg, rgba(232, 240, 254, 0.92), rgba(230, 247, 241, 0.88));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 8px 18px rgba(26, 115, 232, 0.12);
+}
+
+.category-card-media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.category-card-fallback {
+  width: 42%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 36% 35%, var(--vet-green) 0 14%, transparent 15%),
+    radial-gradient(circle at 66% 35%, var(--vet-blue) 0 14%, transparent 15%),
+    radial-gradient(circle at 50% 66%, var(--vet-orange) 0 14%, transparent 15%),
+    rgba(26, 115, 232, 0.1);
+}
+
+.category-card-title {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  height: calc(1.32em * 2);
+  color: var(--text-primary);
+  font-size: 0.88rem;
+  font-weight: 700;
+  line-height: 1.32;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  word-break: normal;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.categories-page {
+  position: relative;
+  overflow: hidden;
+}
+
+.categories-page::before {
+  content: "";
+  position: fixed;
+  inset: 8rem auto auto -7rem;
+  width: min(18rem, 56vw);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: rgba(26, 115, 232, 0.09);
+  filter: blur(48px);
+  pointer-events: none;
+  z-index: -1;
+}
+
+.categories-hero {
+  max-width: 680px;
+  margin-bottom: 2.25rem;
+}
+
+.categories-hero-kicker {
+  width: fit-content;
+  margin-bottom: 0.6rem;
+  padding: 0.35rem 0.65rem;
+  border: 1px solid rgba(26, 115, 232, 0.14);
+  border-radius: 999px;
+  background: rgba(232, 240, 254, 0.8);
+  color: var(--vet-blue-dark);
+  font-size: 0.75rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.categories-hero-title {
+  color: var(--text-primary);
+  font-size: clamp(1.8rem, 4vw, 3rem);
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: 0;
+}
+
+.categories-hero-copy {
+  max-width: 36rem;
+  margin-top: 0.75rem;
+  color: var(--text-secondary);
+  font-size: 1rem;
+  line-height: 1.55;
+}
+
+.categories-list-grid {
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 1.15rem;
+}
+
+.categories-empty-state {
+  display: grid;
+  justify-items: center;
+  gap: 0.9rem;
+  padding: 4rem 1rem;
+  color: var(--text-secondary);
+  text-align: center;
+}
+
+.categories-empty-icon {
+  width: 3rem;
+  aspect-ratio: 1;
+  border-radius: 14px;
+  border: 1px solid rgba(26, 115, 232, 0.14);
+  background:
+    linear-gradient(90deg, transparent 32%, rgba(26, 115, 232, 0.22) 32% 38%, transparent 38% 62%, rgba(13, 158, 110, 0.22) 62% 68%, transparent 68%),
+    linear-gradient(180deg, rgba(232, 240, 254, 0.9), rgba(230, 247, 241, 0.78));
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.07);
+}
+
 .badge {
   display: inline-flex;
   align-items: center;
@@ -264,24 +479,534 @@ img {
 
 .product-results-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   gap: 1.25rem;
+}
+
+/* ─── "Why Choose VetWorld" feature strip ────────────────────── */
+/* 4-up on desktop, 2-up on phones. */
+.why-choose-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 2rem 1.5rem;
+  position: relative;
+}
+
+@media (max-width: 640px) {
+  .why-choose-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.75rem 1rem;
+  }
+}
+
+/* ─── Animated blended brand gradient ────────────────────────── */
+/* Flowing multi-colour brand gradient — used behind the "Why Choose"
+   and "Get In Touch" panels. A wide background-size + animated
+   background-position makes the colours slowly drift and blend. */
+.dynamic-gradient {
+  /* Slightly translucent stops so the frosted-glass backdrop-blur on
+     .brand-panel shows the page through, giving a tinted-glass look. */
+  background: linear-gradient(
+    120deg,
+    color-mix(in srgb, var(--vet-blue) 85%, transparent) 0%,
+    color-mix(in srgb, var(--vet-blue-dark) 85%, transparent) 28%,
+    color-mix(in srgb, var(--vet-green) 85%, transparent) 55%,
+    color-mix(in srgb, var(--vet-blue-dark) 85%, transparent) 78%,
+    color-mix(in srgb, var(--vet-blue) 85%, transparent) 100%
+  );
+  background-size: 300% 300%;
+  animation: gradient-drift 14s ease infinite;
+}
+
+@keyframes gradient-drift {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* Honour users who prefer less motion — keep the gradient, drop the drift. */
+@media (prefers-reduced-motion: reduce) {
+  .dynamic-gradient { animation: none; }
+}
+
+/* Shared rounded panel for the "Why Choose" / "Get In Touch" blocks.
+   Padding lives here (not inline) so it can tighten on phones. */
+.brand-panel {
+  border-radius: var(--radius-lg);
+  padding: 1.75rem 2rem;
+  /* a little breathing room on the left/right so the panel doesn't sit
+     flush against the container edges */
+  margin-inline: 1.75rem;
+  /* Glassmorphism: frosted backdrop blur, translucent border and a top
+     inner highlight on top of the (translucent) gradient. */
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  box-shadow: var(--shadow-lg), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  overflow: hidden;
+  position: relative;
+}
+
+@media (max-width: 640px) {
+  .brand-panel {
+    padding: 1.5rem 1.25rem;
+    margin-inline: 1rem;
+    border-radius: var(--radius-md);
+  }
+}
+
+/* ─── "Get In Touch" contact section ─────────────────────────── */
+/* Contact rows + WhatsApp card side-by-side on desktop, stacked on phones. */
+.get-in-touch-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.75rem;
+  align-items: stretch;
+}
+
+@media (max-width: 768px) {
+  .get-in-touch-grid {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
 }
 
 /* Skip rendering/layout/paint for cards outside the viewport (native virtualization).
    contain-intrinsic-size reserves space so the scrollbar stays stable. */
 .product-results-grid > * {
   content-visibility: auto;
-  contain-intrinsic-size: 380px;
+  contain-intrinsic-size: 300px;
+}
+
+/* ─── Products page: category chips + filter bar ─────────────── */
+/* Horizontal chip strip — momentum scroll on touch, no visible scrollbar. */
+.category-chips {
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.category-chips::-webkit-scrollbar { display: none; }
+
+/* Drag-handle affordance for the quick-view sheet — phones only (see media). */
+.quickview-handle { display: none; }
+
+@media (max-width: 768px) {
+  /* Tighter strip on phones; container-main already insets the sides. */
+  .category-chips { padding: 0.75rem 1rem !important; gap: 0.5rem !important; }
+
+  /* Stack the filter bar: title row, then full-width search, then sort+toggle.
+     (Overrides the inline desktop flex with !important, matching the codebase's
+     mobile-override pattern.) */
+  .filter-bar {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 0.85rem !important;
+    margin-bottom: 0.85rem !important;
+  }
+  .filter-controls {
+    width: 100% !important;
+    gap: 0.75rem 1.25rem !important;
+    justify-content: space-between !important;
+  }
+  /* Search takes its own full-width line; sort + In-Stock sit on the next row. */
+  .filter-search {
+    flex: 1 1 100% !important;
+  }
+
+  /* ── Quick-view modal: centered professional popup on phones ── */
+  .quickview-overlay {
+    align-items: center !important;
+    justify-content: center !important;
+    padding: max(0.85rem, env(safe-area-inset-top, 0px)) 0.85rem max(0.85rem, env(safe-area-inset-bottom, 0px)) !important;
+    background: rgba(15, 23, 42, 0.58) !important;
+    -webkit-backdrop-filter: blur(16px) saturate(120%) !important;
+    backdrop-filter: blur(16px) saturate(120%) !important;
+  }
+
+  .quickview-modal {
+    width: min(94vw, 390px) !important;
+    max-height: calc(100svh - 1.7rem - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)) !important;
+    border-radius: 24px !important;
+    border: 1px solid rgba(255, 255, 255, 0.72) !important;
+    background: rgba(255, 255, 255, 0.96) !important;
+    box-shadow: 0 26px 70px rgba(2, 8, 23, 0.38), inset 0 1px 0 rgba(255, 255, 255, 0.78) !important;
+  }
+
+  .quickview-handle {
+    display: none !important;
+  }
+
+  .quickview-grid {
+    display: block !important;
+    height: auto !important;
+    max-height: inherit !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    scrollbar-width: none;
+    background: transparent !important;
+  }
+
+  .quickview-grid::-webkit-scrollbar {
+    display: none;
+  }
+
+  .quickview-media {
+    min-height: 0 !important;
+    padding: 1rem 1rem 0.65rem !important;
+    background: linear-gradient(180deg, #f8fafc 0%, rgba(248, 250, 252, 0) 100%) !important;
+  }
+
+  .quickview-media > div:first-child {
+    aspect-ratio: 4 / 3 !important;
+    border-radius: 18px !important;
+    box-shadow: 0 14px 34px rgba(15, 23, 42, 0.11) !important;
+  }
+
+  .quickview-info {
+    padding: 0.95rem 1rem 1rem !important;
+    background: transparent !important;
+    overflow: visible !important;
+  }
+
+  .quickview-info > div:first-child {
+    margin-bottom: 0.85rem !important;
+  }
+
+  .quickview-info h2 {
+    padding-right: 2.45rem !important;
+    margin-bottom: 0.55rem !important;
+    font-size: clamp(1.12rem, 5.4vw, 1.45rem) !important;
+    line-height: 1.15 !important;
+  }
+
+  .quickview-info p {
+    font-size: 0.82rem !important;
+    line-height: 1.45 !important;
+    margin-bottom: 0.8rem !important;
+  }
+
+  .quickview-info > div:first-child > div:first-child {
+    gap: 0.45rem !important;
+    padding-right: 2.45rem !important;
+    margin-bottom: 0.55rem !important;
+    align-items: flex-start !important;
+  }
+
+  .quickview-actions {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 0.85rem !important;
+    margin-top: 0.15rem !important;
+    padding-top: 1rem !important;
+    border-top-color: rgba(226, 232, 240, 0.9) !important;
+  }
+
+  .quickview-actions > div:first-child {
+    width: 100% !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 0.7rem !important;
+  }
+
+  .quickview-actions > div:first-child span[style*="2rem"] {
+    font-size: clamp(1.35rem, 7vw, 1.72rem) !important;
+  }
+
+  .quickview-action-btns {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    width: 100% !important;
+    gap: 0.55rem !important;
+  }
+
+  .quickview-cta {
+    width: 100% !important;
+    min-width: 0 !important;
+    border-radius: 14px !important;
+    padding: 0.82rem 1rem !important;
+  }
+
+  .quickview-viewcart {
+    width: 100% !important;
+    border-radius: 14px !important;
+    padding: 0.78rem 1rem !important;
+  }
+
+  .quickview-close {
+    top: 0.8rem !important;
+    right: 0.8rem !important;
+    width: 36px !important;
+    height: 36px !important;
+    border-radius: 50% !important;
+    background: rgba(255, 255, 255, 0.92) !important;
+    box-shadow: 0 8px 22px rgba(15, 23, 42, 0.12) !important;
+  }
+}
+
+@media (max-width: 360px) {
+  .quickview-modal {
+    width: calc(100vw - 1rem) !important;
+    border-radius: 20px !important;
+  }
+
+  .quickview-media {
+    padding: 0.75rem 0.75rem 0.45rem !important;
+  }
+
+  .quickview-info {
+    padding: 0.8rem 0.82rem 0.85rem !important;
+  }
+
+  .quickview-info h2 {
+    font-size: 1.08rem !important;
+  }
 }
 
 @media (max-width: 640px) {
+  /* Always two columns on phones — auto-fill with a 160px min collapsed to a
+     single full-width column on narrow screens, which felt oversized. */
   .product-results-grid {
-    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-    gap: 0.75rem;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.6rem;
   }
 
   .product-results-grid > * {
-    contain-intrinsic-size: 300px;
+    contain-intrinsic-size: 230px;
   }
+}
+
+/* ─── Product card: compact, professional sizing on phones ─── */
+@media (max-width: 640px) {
+  .product-card-imgwrap { padding: 0.5rem !important; }
+  .product-card-body    { padding: 0.5rem 0.6rem 0.25rem !important; }
+  .product-card-title   { font-size: 0.8rem !important; margin-bottom: 0.1rem !important; }
+  .product-card-desc    { display: none !important; } /* hide blurb to keep cards tight */
+  .product-card-price   { font-size: 0.95rem !important; }
+  .product-card-cta     { padding: 0 0.6rem 0.6rem !important; gap: 0.35rem !important; }
+  .product-card-cta button {
+    padding: 0.55rem 0.5rem !important;
+    font-size: 0.78rem !important;
+  }
+
+  /* ── Home-page carousels only (.hide-scrollbar) ──
+     Don't stretch cards to equal height, so name/price/type stay tightly
+     grouped instead of being spread apart by the equal-height fill. The
+     category grid keeps its reserved height + bottom-pinned button. */
+  .hide-scrollbar {
+    align-items: flex-start !important;
+    /* Mobile width budget per carousel section (≈360px phone):
+         container-main 1rem + carousel-panel 0.6rem − wrapper margin 1rem
+         + this 1.25rem left padding ⇒ first card ≈1.85rem from the screen edge,
+       a small, balanced start gap. Tighter card gap fits ~2.2 cards in view. */
+    padding-left: 1.25rem !important;
+    /* keep scroll-padding in sync with padding-left so the first card snaps to
+       scrollLeft:0 — otherwise the left nav arrow never hides at the start. */
+    scroll-padding-left: 1.25rem !important;
+    gap: 0.85rem !important;
+  }
+
+  /* Trim the carousel panel so cards reclaim the narrow viewport (was 1.5rem). */
+  .carousel-panel { padding: 1rem 0.6rem !important; }
+
+  /* Match the track bleed to the trimmed panel padding (0.6rem) so the last
+     card clips at the panel's edge instead of spilling out past the right. */
+  .carousel-track-wrap { margin-left: -0.6rem; margin-right: -0.6rem; }
+
+  /* Tighten the heading row above each carousel, and align "View all" to the
+     top next to the title (flex-end pinned it low against the subtitle, which
+     looked glued to the edge). A touch more bottom margin lifts it off the
+     carousel panel below. */
+  .section-header {
+    align-items: flex-start !important;
+    margin-bottom: 1rem !important;
+    /* small left/right inset so the title, caption and "View all" don't sit
+       flush on the panel/layout border below — leaves a little breathing gap. */
+    padding: 0 1.5rem !important;
+  }
+
+  /* The carousel panel is only ~0.6rem padded on phones while the wrapper still
+     sticks out -1rem, so the arrows need a bigger inset to clear the border
+     instead of floating at the screen edge. */
+  .carousel-arrow-left  { left: 1.1rem !important; }
+  .carousel-arrow-right { right: 1.1rem !important; }
+  /* height:auto drops the reserved 2nd title line so short names sit right
+     above the price (line-clamp still caps long names at 2 lines). */
+  .hide-scrollbar .product-card-title { height: auto !important; }
+  /* replaces the inline margin-top:auto so the type+button hug the price. */
+  .hide-scrollbar .product-card-cta { margin-top: 0.3rem !important; }
+}
+
+/* ─── Mobile layout foundation (tighter spacing + headings) ─── */
+@media (max-width: 640px) {
+  /* More usable width on phones (1.5rem each side ate ~48px). */
+  .container-main { padding: 0 1rem; }
+
+  /* Sections were 3rem top/bottom — too airy on small screens. */
+  .section { padding-block: 1.5rem; }
+
+  /* Scale headings down so they read as a heading, not a hero. */
+  .section-title    { font-size: 1.25rem; margin-bottom: 0.2rem; }
+  .section-subtitle { font-size: 0.85rem; margin-bottom: 1.25rem; }
+
+  /* Categories: 3 compact tiles per row instead of one giant column. */
+  .section-panel { padding: 1.5rem 1rem; }
+  .category-grid {
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 0.6rem !important;
+    margin-top: 1rem !important;
+  }
+
+  .categories-page {
+    padding-top: 1.15rem;
+  }
+
+  .categories-hero {
+    margin-bottom: 1.15rem;
+  }
+
+  .categories-hero-kicker {
+    margin-bottom: 0.55rem;
+    padding: 0.32rem 0.55rem;
+    font-size: 0.68rem;
+  }
+
+  .categories-hero-title {
+    font-size: clamp(1.55rem, 10vw, 2rem);
+    line-height: 1.08;
+  }
+
+  .categories-hero-copy {
+    margin-top: 0.55rem;
+    font-size: 0.88rem;
+    line-height: 1.45;
+  }
+
+  .categories-list-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.7rem;
+  }
+
+  .category-card {
+    gap: 0.62rem;
+    min-height: 128px;
+    padding: 0.82rem 0.5rem;
+    border-radius: 11px;
+  }
+
+  .category-card-media {
+    width: clamp(50px, 42%, 64px);
+    border-radius: 10px;
+  }
+
+  .category-card-title {
+    height: calc(1.25em * 2);
+    font-size: clamp(0.72rem, 3.45vw, 0.82rem);
+    line-height: 1.25;
+  }
+
+  .categories-empty-state {
+    padding: 3rem 0.75rem;
+  }
+}
+
+@media (max-width: 340px) {
+  .container-main { padding: 0 0.75rem; }
+
+  .categories-list-grid,
+  .category-grid {
+    gap: 0.55rem !important;
+  }
+
+  .category-card {
+    min-height: 116px;
+    padding: 0.7rem 0.42rem;
+  }
+
+  .category-card-media {
+    width: clamp(44px, 39%, 54px);
+  }
+
+  .category-card-title {
+    font-size: 0.7rem;
+  }
+}
+
+/* ─── Responsive Navigation (mobile: top bar + floating bottom bar) ─── */
+/* The floating bottom nav + mobile-only controls are hidden on desktop. */
+.mobile-bottom-nav { display: none; }
+.mobile-bottom-nav-shade { display: none; }
+.nav-mobile-only   { display: none; }
+
+@media (max-width: 768px) {
+  /* Desktop-only pieces collapse on mobile (links move to the bottom bar,
+     inline search bar is replaced by the search icon + drop-down). */
+  .nav-desktop-only { display: none !important; }
+  .nav-action-label { display: none !important; }
+  .nav-search       { display: none !important; }
+
+  /* Reveal mobile-only controls (e.g. the search icon button). */
+  .nav-mobile-only  { display: flex !important; }
+
+  /* Logo keeps its name but shrinks slightly so the 4 icons always fit. */
+  .nav-logo-text { font-size: 1.05rem !important; }
+
+  /* Tighten the top bar so logo + 4 icon actions fit any phone width.
+     margin-left:auto pins the icon group to the right (the flexible search
+     bar that used to do this is hidden on mobile). */
+  .nav-top-row { gap: 0.5rem !important; padding: 0 0.75rem !important; }
+  .nav-actions { gap: 0.45rem !important; margin-left: auto !important; }
+
+  /* All 4 action buttons share one uniform glass-icon theme. */
+  .nav-action {
+    width: 42px !important;
+    height: 42px !important;
+    flex: 0 0 auto !important;
+    padding: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border-radius: 13px !important;
+    background: rgba(255, 255, 255, 0.55) !important;
+    border: 1px solid rgba(15, 23, 42, 0.08) !important;
+    color: var(--text-primary) !important;
+    box-shadow: 0 2px 10px rgba(31, 38, 135, 0.06), inset 0 1px 1px rgba(255, 255, 255, 0.7) !important;
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+  }
+
+  /* Reveal the floating glass bottom nav. */
+  .mobile-bottom-nav { display: flex !important; }
+
+  .mobile-bottom-nav-shade {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 190;
+    display: block;
+    height: calc(env(safe-area-inset-bottom, 0px) + 6.25rem);
+    pointer-events: none;
+    background:
+      linear-gradient(
+        to top,
+        rgba(255, 255, 255, 0.96) 0%,
+        rgba(255, 255, 255, 0.9) 54%,
+        rgba(255, 255, 255, 0) 100%
+      );
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+  }
+
+  /* Keep page content clear of the floating bar. */
+  body { padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 84px); }
+
+  /* Lift the floating WhatsApp button above the bottom nav bar so the bar
+     never covers it (the bar occupies ~84px from the bottom on mobile). */
+  .floating-whatsapp {
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 92px) !important;
+    right: 1rem !important;
+  }
+
+  /* Phones swipe the banner instead — hide the prev/next arrows. */
+  .banner-arrow { display: none !important; }
 }
