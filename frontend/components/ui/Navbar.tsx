@@ -32,7 +32,7 @@ export default function Navbar() {
     const mobileSearchBtnRef = useRef<HTMLButtonElement>(null);
 
     // Live type-ahead matches for the search boxes (shared cache; see hook).
-    const searchResults = useProductSearch(searchQuery);
+    const { results: searchResults } = useProductSearch(searchQuery);
     // Called when a suggestion is chosen — collapse both search surfaces.
     const onSuggestionSelect = () => {
         setIsMobileSearchOpen(false);
