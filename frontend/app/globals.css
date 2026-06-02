@@ -934,7 +934,6 @@ img {
 /* ─── Responsive Navigation (mobile: top bar + floating bottom bar) ─── */
 /* The floating bottom nav + mobile-only controls are hidden on desktop. */
 .mobile-bottom-nav { display: none; }
-.mobile-bottom-nav-shade { display: none; }
 .nav-mobile-only   { display: none; }
 
 @media (max-width: 768px) {
@@ -976,26 +975,6 @@ img {
 
   /* Reveal the floating glass bottom nav. */
   .mobile-bottom-nav { display: flex !important; }
-
-  .mobile-bottom-nav-shade {
-    position: fixed;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    z-index: 190;
-    display: block;
-    height: calc(env(safe-area-inset-bottom, 0px) + 6.25rem);
-    pointer-events: none;
-    background:
-      linear-gradient(
-        to top,
-        rgba(255, 255, 255, 0.96) 0%,
-        rgba(255, 255, 255, 0.9) 54%,
-        rgba(255, 255, 255, 0) 100%
-      );
-    -webkit-backdrop-filter: blur(10px);
-    backdrop-filter: blur(10px);
-  }
 
   /* Keep page content clear of the floating bar. */
   body { padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 84px); }
