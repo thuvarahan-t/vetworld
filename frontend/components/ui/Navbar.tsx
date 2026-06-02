@@ -3,7 +3,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useCartStore } from "@/store/cartStore";
 import { motion, AnimatePresence } from "framer-motion";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useLayoutEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useRouter, usePathname } from "next/navigation";
 import AuthModal, { User } from "./AuthModal";
@@ -12,10 +12,18 @@ import SearchSuggestions from "./SearchSuggestions";
 import { userApi } from "@/lib/api";
 import { useProductSearch } from "@/lib/useProductSearch";
 
+// useLayoutEffect warns during SSR; fall back to useEffect on the server so the
+// pill measurement (client-only) stays warning-free.
+const useIsoLayoutEffect = typeof window !== "undefined" ? useLayoutEffect : useEffect;
+
 export default function Navbar() {
     const router = useRouter();
+    const pathname = usePathname();
     const totalItems = useCartStore((s) => s.totalItems());
     const [menuOpen, setMenuOpen] = useState(false);
+    // Count of orders whose status changed since the user last opened the Orders
+    // page — shown as a notification badge next to the Orders icon.
+    const [orderUpdates, setOrderUpdates] = useState(0);
 
     // Auth state
     const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
@@ -129,6 +137,59 @@ export default function Navbar() {
             }
         }
     }, [user, isMounted]);
+
+    // ── Order-update notifications ───────────────────────────────────────────
+    // Poll the user's orders and badge the Orders icon with how many have changed
+    // status since they last viewed the Orders page. The "seen" snapshot is kept
+    // per-user in localStorage so a status change (or a new order) shows up, and
+    // visiting /orders clears it.
+    useEffect(() => {
+        if (!isMounted || !user?.email) { setOrderUpdates(0); return; }
+
+        const seenKey = `vetworld_orders_seen:${user.email}`;
+        const readSeen = (): Record<string, string> => {
+            try { return JSON.parse(localStorage.getItem(seenKey) || "{}"); } catch { return {}; }
+        };
+        const onOrdersPage = pathname?.startsWith("/orders") ?? false;
+
+        let cancelled = false;
+        const refresh = async () => {
+            try {
+                const orders = await userApi.getMyOrders();
+                if (cancelled) return;
+                const current: Record<string, string> = {};
+                for (const o of orders) current[String(o.id)] = o.status;
+
+                // First run for this user: seed the baseline silently (don't badge
+                // pre-existing orders).
+                if (localStorage.getItem(seenKey) === null) {
+                    localStorage.setItem(seenKey, JSON.stringify(current));
+                    setOrderUpdates(0);
+                    return;
+                }
+
+                if (onOrdersPage) {
+                    // They're looking at the orders — mark everything as seen.
+                    localStorage.setItem(seenKey, JSON.stringify(current));
+                    setOrderUpdates(0);
+                } else {
+                    const seen = readSeen();
+                    const changed = orders.filter((o) => seen[String(o.id)] !== o.status).length;
+                    setOrderUpdates(changed);
+                }
+            } catch { /* ignore — keep last known count */ }
+        };
+
+        refresh();
+        const timer = setInterval(refresh, 30000);
+        const onFocus = () => refresh();
+        window.addEventListener("focus", onFocus);
+        return () => {
+            cancelled = true;
+            clearInterval(timer);
+            window.removeEventListener("focus", onFocus);
+        };
+    }, [isMounted, user?.email, pathname]);
 
     const handleSearch = (e: React.FormEvent) => {
         e.preventDefault();
@@ -414,8 +475,9 @@ export default function Navbar() {
                         <Link
                             href="/orders"
                             className="nav-action"
-                            aria-label="My Orders"
+                            aria-label={orderUpdates > 0 ? `My Orders (${orderUpdates} updated)` : "My Orders"}
                             style={{
+                                position: "relative",
                                 display: "flex",
                                 alignItems: "center",
                                 gap: "0.4rem",
@@ -439,6 +501,16 @@ export default function Navbar() {
                         >
                             <OrdersIcon />
                             <span className="nav-action-label">My Orders</span>
+                            {orderUpdates > 0 && (
+                                <motion.span
+                                    initial={{ scale: 0 }}
+                                    animate={{ scale: 1 }}
+                                    className="badge"
+                                    style={{ position: "absolute", top: -8, right: -8 }}
+                                >
+                                    {orderUpdates}
+                                </motion.span>
+                            )}
                         </Link>
                     )}
 
@@ -567,6 +639,7 @@ export default function Navbar() {
             <MobileBottomNav
                 isLoggedIn={isMounted && !!user}
                 onRequireAuth={() => setIsAuthModalOpen(true)}
+                orderBadge={orderUpdates}
             />
 
             {/* ── Logout Confirmation Dialog (Portal) ── */}
@@ -747,14 +820,159 @@ function NavLinks() {
 /* ── Floating glass bottom nav (mobile). A compact, content-width pill
    centred via left:50% + x:-50%; springs up on mount, and the travelling
    pill marks the active page. ── */
-function MobileBottomNav({ isLoggedIn, onRequireAuth }: { isLoggedIn: boolean; onRequireAuth: () => void }) {
+function MobileBottomNav({ isLoggedIn, onRequireAuth, orderBadge }: { isLoggedIn: boolean; onRequireAuth: () => void; orderBadge: number }) {
     const pathname = usePathname();
+    const router = useRouter();
     const activeHref = getActiveHref(pathname, MOBILE_NAV_ITEMS);
+
+    const navRef = useRef<HTMLElement>(null);
+    const itemRefs = useRef<Record<string, HTMLAnchorElement | null>>({});
+    // The single travelling pill, positioned from the active tab's measured rect.
+    // `animate` stays false for the very first placement so the pill simply
+    // appears under the active tab instead of sliding in from the corner.
+    const [pill, setPill] = useState<{ x: number; y: number; w: number; h: number; animate: boolean } | null>(null);
+    // The glass is see-through, so the dark footer scrolling up behind it makes
+    // the tabs hard to read. Track when the bar overlaps the footer and solidify
+    // it to white in that case; stay glassy everywhere else.
+    const [overFooter, setOverFooter] = useState(false);
+
+    // iOS-26-style drag: press the bar and slide — the pill follows your finger
+    // and you switch to whichever tab you release on. `drag` holds the live pill
+    // x while dragging; `dragHref` is the tab currently under the finger.
+    const [drag, setDrag] = useState<{ x: number } | null>(null);
+    const [dragHref, setDragHref] = useState<string | null>(null);
+    const dragState = useRef({ active: false, moved: false, startX: 0 });
+    const suppressClickRef = useRef(false);
+
+    // Re-measure whenever the active tab changes. Because the nav lives in the
+    // persistent layout (never re-mounts), the previous pill position is kept,
+    // so the pill always travels from the *current* tab to the next one —
+    // 3rd→4th, never 1st→4th.
+    useIsoLayoutEffect(() => {
+        const measure = () => {
+            const nav = navRef.current;
+            const el = activeHref ? itemRefs.current[activeHref] : null;
+            if (!nav || !el) return;
+            const navRect = nav.getBoundingClientRect();
+            const r = el.getBoundingClientRect();
+            setPill((prev) => ({
+                x: r.left - navRect.left,
+                y: r.top - navRect.top,
+                w: r.width,
+                h: r.height,
+                animate: prev !== null, // skip the slide on the initial placement
+            }));
+        };
+        measure();
+        // Keep the pill aligned on viewport resize / orientation change.
+        window.addEventListener("resize", measure);
+        return () => window.removeEventListener("resize", measure);
+    }, [activeHref]);
+
+    // Watch whether the floating bar currently overlaps the (dark) footer.
+    useEffect(() => {
+        let raf = 0;
+        const check = () => {
+            raf = 0;
+            const nav = navRef.current;
+            const footer = document.querySelector("footer");
+            if (!nav || !footer) return;
+            const navRect = nav.getBoundingClientRect();
+            const footerRect = footer.getBoundingClientRect();
+            setOverFooter(footerRect.top < navRect.bottom && footerRect.bottom > navRect.top);
+        };
+        const onScroll = () => { if (!raf) raf = requestAnimationFrame(check); };
+        check();
+        window.addEventListener("scroll", onScroll, { passive: true });
+        window.addEventListener("resize", onScroll);
+        return () => {
+            window.removeEventListener("scroll", onScroll);
+            window.removeEventListener("resize", onScroll);
+            if (raf) cancelAnimationFrame(raf);
+        };
+    }, [pathname]);
+
+    // Navigate, honouring the Orders auth gate.
+    const navTo = (href: string) => {
+        if (href === "/orders" && !isLoggedIn) { onRequireAuth(); return false; }
+        if (href !== pathname) router.push(href);
+        return true;
+    };
+
+    // The tab whose box contains clientX (falls back to the nearest centre so a
+    // finger past either end still selects the end tab).
+    const hrefAtClientX = (clientX: number): string | null => {
+        let best: string | null = null;
+        let bestDist = Infinity;
+        for (const item of MOBILE_NAV_ITEMS) {
+            const el = itemRefs.current[item.href];
+            if (!el) continue;
+            const r = el.getBoundingClientRect();
+            if (clientX >= r.left && clientX <= r.right) return item.href;
+            const d = Math.abs(clientX - (r.left + r.width / 2));
+            if (d < bestDist) { bestDist = d; best = item.href; }
+        }
+        return best;
+    };
+
+    const onPointerDown = (e: React.PointerEvent) => {
+        dragState.current = { active: true, moved: false, startX: e.clientX };
+    };
+
+    const onPointerMove = (e: React.PointerEvent) => {
+        const st = dragState.current;
+        if (!st.active || !pill) return;
+        if (!st.moved) {
+            if (Math.abs(e.clientX - st.startX) < 6) return; // ignore micro-jitter taps
+            st.moved = true;
+            navRef.current?.setPointerCapture?.(e.pointerId);
+        }
+        const nav = navRef.current;
+        if (!nav) return;
+        const navRect = nav.getBoundingClientRect();
+        // Centre the pill on the finger, clamped to the first/last tab slots.
+        const first = itemRefs.current[MOBILE_NAV_ITEMS[0].href]?.getBoundingClientRect();
+        const last = itemRefs.current[MOBILE_NAV_ITEMS[MOBILE_NAV_ITEMS.length - 1].href]?.getBoundingClientRect();
+        let x = e.clientX - navRect.left - pill.w / 2;
+        if (first && last) x = Math.max(first.left - navRect.left, Math.min(last.left - navRect.left, x));
+        setDrag({ x });
+        setDragHref(hrefAtClientX(e.clientX));
+    };
+
+    const endDrag = () => {
+        const st = dragState.current;
+        dragState.current = { active: false, moved: false, startX: 0 };
+        if (st.moved && dragHref) {
+            // Suppress the click that the browser fires after the drag's pointerup.
+            suppressClickRef.current = true;
+            setTimeout(() => { suppressClickRef.current = false; }, 60);
+            const ok = navTo(dragHref);
+            // Snap the pill to the chosen tab (spring) when we actually navigate;
+            // otherwise let it spring back to the current tab.
+            const snapHref = ok ? dragHref : activeHref;
+            const el = snapHref ? itemRefs.current[snapHref] : null;
+            const nav = navRef.current;
+            if (el && nav) {
+                const navRect = nav.getBoundingClientRect();
+                const r = el.getBoundingClientRect();
+                setPill({ x: r.left - navRect.left, y: r.top - navRect.top, w: r.width, h: r.height, animate: true });
+            }
+        }
+        setDrag(null);
+        setDragHref(null);
+    };
+
+    // While dragging, the visual "active" tab is the one under the finger.
+    const highlightHref = drag ? dragHref : activeHref;
 
     return (
         <>
-        <div className="mobile-bottom-nav-shade" aria-hidden="true" />
         <motion.nav
+            ref={navRef}
+            onPointerDown={onPointerDown}
+            onPointerMove={onPointerMove}
+            onPointerUp={endDrag}
+            onPointerCancel={endDrag}
             className="mobile-bottom-nav"
             aria-label="Primary"
             initial={{ opacity: 0, y: 28, x: "-50%" }}
@@ -771,26 +989,111 @@ function MobileBottomNav({ isLoggedIn, onRequireAuth }: { isLoggedIn: boolean; o
                 gap: "0.2rem",
                 padding: "0.4rem",
                 borderRadius: "999px",
-                background: "rgba(255, 255, 255, 0.84)",
-                backdropFilter: "blur(18px) saturate(180%)",
-                WebkitBackdropFilter: "blur(18px) saturate(180%)",
-                border: "1px solid rgba(255, 255, 255, 0.78)",
-                boxShadow: "0 8px 32px rgba(31, 38, 135, 0.18), inset 0 1px 1px rgba(255, 255, 255, 0.82)",
+                overflow: "hidden", // clip the reflection sheen to the rounded shape
+                touchAction: "none", // let the slide-to-switch drag own touch input
+                // Liquid-glass material: a translucent vertical tint over a strong
+                // blur so the content behind shows through and refracts.
+                background: "linear-gradient(180deg, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0.32) 100%)",
+                backdropFilter: "blur(22px) saturate(200%) brightness(1.06)",
+                WebkitBackdropFilter: "blur(22px) saturate(200%) brightness(1.06)",
+                border: "1px solid rgba(255, 255, 255, 0.55)",
+                boxShadow: [
+                    "0 10px 36px rgba(31, 38, 135, 0.22)",   // soft float shadow
+                    "0 2px 8px rgba(31, 38, 135, 0.10)",
+                    "inset 0 1px 1px rgba(255, 255, 255, 0.95)",   // bright top specular edge
+                    "inset 0 -10px 18px rgba(255, 255, 255, 0.20)", // soft inner bottom glow
+                    "inset 0 0 0 0.5px rgba(255, 255, 255, 0.40)",  // crisp glass rim
+                ].join(", "),
             }}
         >
+            {/* Solid white underlay — fades in only while the bar overlaps the
+                dark footer, so the tabs stay readable. Sits behind the pill and
+                tab content (zIndex 0), above the blurred glass background. */}
+            <span
+                aria-hidden="true"
+                style={{
+                    position: "absolute",
+                    inset: 0,
+                    borderRadius: "inherit",
+                    background: "#ffffff",
+                    opacity: overFooter ? 1 : 0,
+                    transition: "opacity 0.3s ease",
+                    pointerEvents: "none",
+                    zIndex: 0,
+                }}
+            />
+
+            {/* Specular reflection — a glossy sheen across the top of the glass,
+                like the iOS 26 / WhatsApp liquid-glass bar. Kept subtle and only
+                over the upper half so the tab icons stay legible. Sits above the
+                content (zIndex 2) so it reads as light on the glass surface. */}
+            <span
+                aria-hidden="true"
+                style={{
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    height: "52%",
+                    borderRadius: "999px 999px 40% 40% / 999px 999px 100% 100%",
+                    background: "linear-gradient(to bottom, rgba(255,255,255,0.50) 0%, rgba(255,255,255,0.14) 55%, rgba(255,255,255,0) 100%)",
+                    pointerEvents: "none",
+                    zIndex: 2,
+                }}
+            />
+            {/* Single travelling liquid-glass pill — only `transform` animates, so
+                the slide is GPU-composited and stays smooth even while the next
+                page is rendering on the main thread. */}
+            {pill && (
+                <span
+                    aria-hidden="true"
+                    style={{
+                        position: "absolute",
+                        top: 0,
+                        left: 0,
+                        width: pill.w,
+                        height: pill.h,
+                        // Follow the finger while dragging; otherwise sit on the active tab.
+                        transform: `translate(${drag ? drag.x : pill.x}px, ${pill.y}px) scale(${drag ? 1.06 : 1})`,
+                        // Hide on non-tab routes (cart/checkout/product) but keep the
+                        // measured position so it can travel back in on return.
+                        opacity: (activeHref || drag) ? 1 : 0,
+                        borderRadius: "999px",
+                        background: "linear-gradient(135deg, rgba(26,115,232,0.18), rgba(255,255,255,0.4))",
+                        border: "1px solid rgba(26,115,232,0.3)",
+                        boxShadow: drag
+                            ? "0 8px 22px rgba(26,115,232,0.30), inset 0 1px 1px rgba(255,255,255,0.8)"
+                            : "0 4px 16px rgba(26,115,232,0.22), inset 0 1px 1px rgba(255,255,255,0.7)",
+                        transition: drag
+                            ? "transform 0.10s ease-out, box-shadow 0.15s ease"
+                            : pill.animate
+                                ? "transform 0.42s cubic-bezier(0.22, 1, 0.36, 1), width 0.42s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.2s ease, opacity 0.25s ease"
+                                : "opacity 0.25s ease",
+                        zIndex: 0,
+                        pointerEvents: "none",
+                    }}
+                />
+            )}
             {MOBILE_NAV_ITEMS.map((item) => {
                 const isActive = item.href === activeHref;
+                const isHighlighted = item.href === highlightHref;
                 const Icon = item.icon;
                 // Orders needs a session — prompt login instead of bouncing to home.
                 const requiresAuth = item.href === "/orders" && !isLoggedIn;
                 return (
-                    <motion.div key={item.href} whileTap={{ scale: 0.92 }} style={{ flex: 1 }}>
+                    <div key={item.href} style={{ flex: 1, position: "relative", zIndex: 1 }}>
                     <Link
+                        ref={(el) => { itemRefs.current[item.href] = el; }}
                         href={item.href}
                         aria-current={isActive ? "page" : undefined}
-                        onClick={requiresAuth ? (e) => { e.preventDefault(); onRequireAuth(); } : undefined}
+                        draggable={false}
+                        onClick={(e) => {
+                            // A click fired right after a slide-gesture — ignore it,
+                            // the drag already navigated.
+                            if (suppressClickRef.current) { e.preventDefault(); return; }
+                            if (requiresAuth) { e.preventDefault(); onRequireAuth(); }
+                        }}
                         style={{
-                            position: "relative",
                             display: "flex",
                             flexDirection: "column",
                             alignItems: "center",
@@ -798,35 +1101,28 @@ function MobileBottomNav({ isLoggedIn, onRequireAuth }: { isLoggedIn: boolean; o
                             gap: "0.15rem",
                             padding: "0.5rem 0",
                             borderRadius: "999px",
-                            color: isActive ? "var(--vet-blue)" : "var(--text-secondary)",
-                            fontWeight: isActive ? 700 : 500,
+                            color: isHighlighted ? "var(--vet-blue)" : "var(--text-secondary)",
+                            fontWeight: isHighlighted ? 700 : 500,
                             fontSize: "0.68rem",
                             transition: "color 0.25s ease",
+                            transform: drag && isHighlighted ? "scale(1.04)" : "scale(1)",
                             WebkitTapHighlightColor: "transparent",
                         }}
                     >
-                        {/* Travelling liquid-glass pill */}
-                        {isActive && (
-                            <motion.span
-                                layoutId="mobile-nav-pill"
-                                transition={{ type: "spring", stiffness: 380, damping: 32 }}
-                                style={{
-                                    position: "absolute",
-                                    inset: 0,
-                                    borderRadius: "999px",
-                                    background: "linear-gradient(135deg, rgba(26,115,232,0.18), rgba(255,255,255,0.4))",
-                                    border: "1px solid rgba(26,115,232,0.3)",
-                                    boxShadow: "0 4px 16px rgba(26,115,232,0.22), inset 0 1px 1px rgba(255,255,255,0.7)",
-                                    zIndex: 0,
-                                }}
-                            />
-                        )}
-                        <span style={{ position: "relative", zIndex: 1, display: "flex" }}>
+                        <span style={{ position: "relative", display: "flex", transition: "transform 0.18s ease", transform: drag && isHighlighted ? "translateY(-1px)" : "none" }}>
                             <Icon />
+                            {item.href === "/orders" && orderBadge > 0 && (
+                                <span
+                                    className="badge"
+                                    style={{ position: "absolute", top: -7, right: -10, minWidth: 16, height: 16, fontSize: "0.62rem" }}
+                                >
+                                    {orderBadge}
+                                </span>
+                            )}
                         </span>
-                        <span style={{ position: "relative", zIndex: 1 }}>{item.label}</span>
+                        <span>{item.label}</span>
                     </Link>
-                    </motion.div>
+                    </div>
                 );
             })}
         </motion.nav>

@@ -1,11 +1,12 @@
+import { Suspense } from "react";
 import { api } from "@/lib/api";
 import BannerCarousel from "@/components/ui/BannerCarousel";
-import ProductCard from "@/components/ui/ProductCard";
 import ProductCarousel from "@/components/ui/ProductCarousel";
 import CategoryCard from "@/components/ui/CategoryCard";
 import WhyChooseUs from "@/components/ui/WhyChooseUs";
 import GetInTouch from "@/components/ui/GetInTouch";
 import Reveal from "@/components/ui/Reveal";
+import HomeSkeleton from "@/components/ui/HomeSkeleton";
 import Link from "next/link";
 import type { Banner, Product, Category } from "@/types";
 
@@ -54,9 +55,9 @@ async function getData() {
   }
 }
 
-export default async function HomePage() {
-  const { banners, topSelling, recent, categories, categorySections } = await getData();
-
+// Shell renders instantly so tapping the Home tab navigates immediately; the
+// data-driven content streams in behind a <Suspense> with a skeleton fallback.
+export default function HomePage() {
   return (
     <main style={{ position: "relative", overflow: "hidden" }}>
       {/* ── Background Decorative Elements ──────────────── */}
@@ -64,6 +65,18 @@ export default async function HomePage() {
       <div style={{ position: "fixed", bottom: "10%", right: "-5%", width: "35vw", height: "35vw", borderRadius: "50%", background: "radial-gradient(circle, rgba(249,115,22,0.1) 0%, transparent 70%)", filter: "blur(60px)", zIndex: -1 }}></div>
       <div style={{ position: "fixed", top: "40%", right: "10%", width: "25vw", height: "25vw", borderRadius: "50%", background: "radial-gradient(circle, rgba(13,158,110,0.1) 0%, transparent 70%)", filter: "blur(60px)", zIndex: -1 }}></div>
 
+      <Suspense fallback={<HomeSkeleton />}>
+        <HomeContent />
+      </Suspense>
+    </main>
+  );
+}
+
+async function HomeContent() {
+  const { banners, topSelling, recent, categories, categorySections } = await getData();
+
+  return (
+    <>
       {/* ── Banner Carousel ─────────────────────────────── */}
       <section className="container-main">
         <BannerCarousel banners={banners as Banner[]} />
@@ -177,9 +190,7 @@ export default async function HomePage() {
             </Link>
           </section>
         )}
-
-
-    </main>
+    </>
   );
 }
 
