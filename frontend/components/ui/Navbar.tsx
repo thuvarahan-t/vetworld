@@ -341,36 +341,79 @@ export default function Navbar() {
         }
 
         return (
-            <button
+            <motion.button
                 onClick={() => setIsAuthModalOpen(true)}
-                className="nav-action"
+                className="nav-action nav-login-action"
                 aria-label="Login"
                 style={{
+                    position: "relative",
+                    overflow: "hidden",
                     display: "flex",
                     alignItems: "center",
                     gap: "0.4rem",
-                    background: "var(--bg)",
-                    color: "var(--text-primary)",
+                    background: "linear-gradient(120deg, var(--vet-blue), #2563eb, #14b8a6, var(--vet-blue))",
+                    backgroundSize: "300% 300%",
+                    color: "white",
                     fontWeight: 600,
                     fontSize: "0.9rem",
                     padding: "0.5rem 1rem",
                     borderRadius: "var(--radius-sm)",
-                    border: "1.5px solid var(--border)",
-                    transition: "all var(--transition)",
+                    border: "1.5px solid rgba(255, 255, 255, 0.35)",
                     cursor: "pointer",
                 }}
-                onMouseEnter={(e) => {
-                    e.currentTarget.style.borderColor = "var(--vet-blue)";
-                    e.currentTarget.style.color = "var(--vet-blue)";
+                animate={{
+                    backgroundPosition: ["0% 50%", "100% 50%", "0% 50%"],
+                    boxShadow: [
+                        "0 4px 14px rgba(37, 99, 235, 0.22)",
+                        "0 6px 20px rgba(20, 184, 166, 0.32)",
+                        "0 4px 14px rgba(37, 99, 235, 0.22)",
+                    ],
                 }}
-                onMouseLeave={(e) => {
-                    e.currentTarget.style.borderColor = "var(--border)";
-                    e.currentTarget.style.color = "var(--text-primary)";
+                transition={{
+                    backgroundPosition: { duration: 5, repeat: Infinity, ease: "linear" },
+                    boxShadow: { duration: 2.5, repeat: Infinity, ease: "easeInOut" },
                 }}
+                whileHover={{ y: -2, scale: 1.04 }}
+                whileTap={{ y: 0, scale: 0.96 }}
             >
-                <UserIcon />
-                <span className="nav-action-label">Login</span>
-            </button>
+                <motion.span
+                    className="nav-login-mobile-gradient"
+                    aria-hidden="true"
+                    style={{
+                        position: "absolute",
+                        inset: 0,
+                        background: "linear-gradient(120deg, var(--vet-blue), #2563eb, #14b8a6, var(--vet-blue))",
+                        backgroundSize: "300% 300%",
+                        pointerEvents: "none",
+                    }}
+                    animate={{ backgroundPosition: ["0% 50%", "100% 50%", "0% 50%"] }}
+                    transition={{ duration: 5, repeat: Infinity, ease: "linear" }}
+                />
+                <motion.span
+                    aria-hidden="true"
+                    style={{
+                        position: "absolute",
+                        top: "-60%",
+                        left: "-35%",
+                        width: "28%",
+                        height: "220%",
+                        background: "rgba(255, 255, 255, 0.42)",
+                        filter: "blur(5px)",
+                        transform: "rotate(20deg)",
+                        pointerEvents: "none",
+                    }}
+                    animate={{ left: ["-35%", "125%"] }}
+                    transition={{ duration: 2.4, repeat: Infinity, repeatDelay: 1.2, ease: "easeInOut" }}
+                />
+                <motion.span
+                    style={{ display: "flex", position: "relative", zIndex: 1 }}
+                    animate={{ rotate: [0, -8, 8, 0] }}
+                    transition={{ duration: 0.7, repeat: Infinity, repeatDelay: 3.3 }}
+                >
+                    <UserIcon />
+                </motion.span>
+                <span className="nav-action-label" style={{ position: "relative", zIndex: 1 }}>Login</span>
+            </motion.button>
         );
     };
 

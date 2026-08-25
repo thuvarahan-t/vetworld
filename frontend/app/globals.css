@@ -935,6 +935,7 @@ img {
 /* The floating bottom nav + mobile-only controls are hidden on desktop. */
 .mobile-bottom-nav { display: none; }
 .nav-mobile-only   { display: none; }
+.nav-login-mobile-gradient { display: none; }
 
 @media (max-width: 768px) {
   /* Desktop-only pieces collapse on mobile (links move to the bottom bar,
@@ -972,6 +973,17 @@ img {
     -webkit-backdrop-filter: blur(8px);
     backdrop-filter: blur(8px);
   }
+
+  /* Keep the animated login treatment visible on mobile too. */
+  .nav-action.nav-login-action {
+    background: linear-gradient(120deg, var(--vet-blue), #2563eb, #14b8a6, var(--vet-blue)) !important;
+    background-size: 300% 300% !important;
+    color: white !important;
+    border-color: rgba(255, 255, 255, 0.35) !important;
+    box-shadow: 0 5px 16px rgba(37, 99, 235, 0.28) !important;
+  }
+
+  .nav-login-mobile-gradient { display: block; }
 
   /* Reveal the floating glass bottom nav. */
   .mobile-bottom-nav { display: flex !important; }
